@@ -64,6 +64,11 @@ object RefereeCall {
         if (state.tiebreak) return "${number(serverPoints)}, ${number(receiverPoints)}"
         if (serverPoints >= 3 && receiverPoints >= 3) {
             return when {
+                serverPoints == receiverPoints && state.settings.deuceRule == DeuceRule.STAR -> when {
+                    state.deuces >= 3 -> "Star point"
+                    state.deuces == 2 -> "Deuce twee"
+                    else -> "Deuce"
+                }
                 serverPoints == receiverPoints && state.isDecidingPoint -> "Deuce. ${state.settings.deuceRule.label}"
                 serverPoints == receiverPoints -> "Deuce"
                 serverPoints > receiverPoints -> "Voordeel"

@@ -96,6 +96,8 @@ data class MatchState(
             winner != null -> "${winner.label} wint!"
             tiebreak -> "Tiebreak"
             isDecidingPoint -> settings.deuceRule.label
+            // Star point: de tweede deuce ook laten zien, zodat iedereen weet dat de volgende beslist.
+            settings.deuceRule == DeuceRule.STAR && !tiebreak && pointsA == 3 && pointsB == 3 && deuces == 2 -> "Deuce 2"
             else -> null
         }
 

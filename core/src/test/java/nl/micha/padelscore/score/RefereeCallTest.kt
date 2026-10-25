@@ -147,8 +147,9 @@ class RefereeCallTest {
         s = s.pointFor(Team.A)
         assertEquals("Deuce", call(s, Team.B))
         s = s.pointFor(Team.B).pointFor(Team.A)
-        assertEquals("Deuce", call(s, Team.B))
+        assertEquals("Deuce twee", call(s, Team.B))
+        assertEquals("Deuce 2", s.pointFor(Team.B).statusText)
         s = s.pointFor(Team.B).pointFor(Team.A)
-        assertEquals("Deuce. Star point", call(s, Team.B))
+        assertEquals("Star point", call(s, Team.B))
     }
 }
