@@ -46,6 +46,10 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
     var dndAccess by mutableStateOf(DoNotDisturb.hasAccess(app))
         private set
 
+    /** Of er een eigen applausgeluid gekozen is. */
+    var customApplause by mutableStateOf(Announcer.customApplause(app) != null)
+        private set
+
     /** Welke stem er spreekt, bijvoorbeeld "Stem 2 van 5". */
     var voiceLabel by mutableStateOf("Standaardstem")
         private set
@@ -100,6 +104,13 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshDndAccess() {
         dndAccess = DoNotDisturb.hasAccess(getApplication())
     }
+
+    fun setApplause(uri: android.net.Uri?) {
+        Announcer.setCustomApplause(getApplication(), uri)
+        customApplause = uri != null
+    }
+
+    fun testApplause() = Announcer.testApplause(getApplication())
 
     fun nextVoice() {
         Announcer.nextVoice(getApplication())

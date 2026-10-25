@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
@@ -20,6 +21,8 @@ object Announcer {
     private const val PREFS = "phone"
     private const val KEY_ENABLED = "announce"
     private const val KEY_VOICE = "voice"
+    private const val KEY_APPLAUSE = "applause_uri"
+    private const val APPLAUSE_MS = 10_000L
     private const val PAUSE_MS = 700L
 
     /** Stilte vooraf, zodat een Bluetooth-speaker uit zijn slaapstand komt en het begin niet mist. */
@@ -178,21 +181,54 @@ object Announcer {
 
     // Een nieuwe stand onderbreekt de vorige, zodat je bij snelle punten altijd de actuele hoort.
     // Elke regel is een los stuk met een korte pauze ertussen.
-    /** Ongeveer 10 seconden applaus (zelf gegenereerd, zie mobile/applause_gen.py). */
+    /** Eigen applausgeluid van de telefoon, of null voor het ingebouwde. */
+    fun customApplause(context: Context): Uri? =
+        prefs(context).getString(KEY_APPLAUSE, null)?.let(Uri::parse)
+
+    fun setCustomApplause(context: Context, uri: Uri?) {
+        prefs(context).edit().putString(KEY_APPLAUSE, uri?.toString()).apply()
+    }
+
+    /** Applaus laten horen, om het geluid uit te proberen. */
+    fun testApplause(context: Context) {
+        appContext = context.applicationContext
+        if (audio == null) audio = context.getSystemService(AudioManager::class.java)
+        audio?.requestAudioFocus(focus)
+        playApplause()
+    }
+
+    /**
+     * Ongeveer 10 seconden applaus: een eigen geluid als dat gekozen is, anders het ingebouwde
+     * (zelf gegenereerd, zie mobile/applause_gen.py). Een lang eigen geluid stopt na 10 seconden.
+     */
     private fun playApplause() {
         val context = appContext ?: return
         stopApplause()
-        val session = audio?.generateAudioSessionId() ?: return
-        player = MediaPlayer.create(context, R.raw.applause, attributes, session)?.apply {
-            setOnCompletionListener {
-                stopApplause()
-                audio?.abandonAudioFocusRequest(focus)
-            }
+        val done = {
+            stopApplause()
+            audio?.abandonAudioFocusRequest(focus)
+        }
+        player = customApplause(context)?.let { uri ->
+            runCatching {
+                MediaPlayer().apply {
+                    setAudioAttributes(attributes)
+                    setDataSource(context, uri)
+                    prepare()
+                }
+            }.getOrNull()
+        } ?: run {
+            val session = audio?.generateAudioSessionId() ?: return
+            MediaPlayer.create(context, R.raw.applause, attributes, session)
+        }
+        player?.apply {
+            setOnCompletionListener { done() }
             start()
         }
+        main.postDelayed({ if (player != null) done() }, APPLAUSE_MS + 500)
     }
 
     private fun stopApplause() {
+        main.removeCallbacksAndMessages(null)
         player?.release()
         player = null
     }

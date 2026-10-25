@@ -189,6 +189,7 @@ private fun PhoneApp(vm: PhoneViewModel) {
             }
             if (vm.announce) {
                 TextButton(onClick = { vm.nextVoice() }) { Text("Stem wisselen (${vm.voiceLabel})") }
+                ApplauseButtons(vm)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Niet storen tijdens partij", color = Color.White, fontSize = 16.sp)
@@ -202,6 +203,29 @@ private fun PhoneApp(vm: PhoneViewModel) {
             OutlinedButton(onClick = { vm.updateWatch() }) { Text("Horloge bijwerken") }
             vm.watchUpdateStatus?.let { Text("Horloge: $it", color = Color.Gray, fontSize = 14.sp) }
             Text("Versie ${BuildConfig.VERSION_NAME}", color = Color.DarkGray, fontSize = 12.sp)
+        }
+    }
+}
+
+/** Applaus testen, en kiezen tussen het ingebouwde en een eigen geluid van de telefoon. */
+@Composable
+private fun ApplauseButtons(vm: PhoneViewModel) {
+    val context = LocalContext.current
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            // Toegang tot het bestand bewaren, ook na een herstart van de telefoon.
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            vm.setApplause(uri)
+        }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = { vm.testApplause() }) { Text("Applaus testen") }
+        if (vm.customApplause) {
+            TextButton(onClick = { vm.setApplause(null) }) { Text("Standaard applaus") }
+        } else {
+            TextButton(onClick = { pick.launch(arrayOf("audio/*")) }) { Text("Eigen applaus kiezen") }
         }
     }
 }
