@@ -42,26 +42,23 @@ class Updater(
         val conn = open(RELEASES_URL)
         conn.setRequestProperty("Accept", "application/vnd.github+json")
         val releases = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
-        // GitHub geeft de nieuwste release eerst.
+        // De volgorde van GitHub is niet op datum te vertrouwen: zoek zelf de hoogste versie.
+        var best: UpdateInfo? = null
         for (i in 0 until releases.length()) {
             val release = releases.getJSONObject(i)
             val tag = release.getString("tag_name")
             if (release.optBoolean("draft") || !tag.startsWith(tagPrefix)) continue
             val code = ReleaseVersion.codeFromTag(tag) ?: continue
-            if (code <= currentVersionCode) return@withContext null
+            if (code <= currentVersionCode || code <= (best?.versionCode ?: 0)) continue
             val assets = release.getJSONArray("assets")
             for (j in 0 until assets.length()) {
                 val asset = assets.getJSONObject(j)
                 if (asset.getString("name") == assetName) {
-                    return@withContext UpdateInfo(
-                        code,
-                        tag.removePrefix(tagPrefix),
-                        asset.getString("browser_download_url"),
-                    )
+                    best = UpdateInfo(code, tag.removePrefix(tagPrefix), asset.getString("browser_download_url"))
                 }
             }
         }
-        null
+        best
     }
 
     /**
@@ -103,7 +100,7 @@ class Updater(
 
     companion object {
         private const val RELEASES_URL =
-            "https://api.github.com/repos/micha35fey/apphorloge/releases?per_page=30"
+            "https://api.github.com/repos/micha35fey/apphorloge/releases?per_page=100"
 
         /**
          * De eerste keer moet je toestaan dat de app zijn eigen update installeert.
