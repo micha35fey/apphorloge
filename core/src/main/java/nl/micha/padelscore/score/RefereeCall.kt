@@ -7,10 +7,13 @@ package nl.micha.padelscore.score
  */
 object RefereeCall {
     const val PAUSE = "\n"
+    const val WELCOME = "Fijne wedstrijd${PAUSE}Maak er een mooie pot van"
 
     /** Tekst om om te roepen bij de overgang van [previous] naar [next], of null als er niets te melden is. */
     fun announce(previous: MatchState?, next: MatchState): String? {
         if (previous == next) return null
+        // Begin van een nieuwe partij: een welkom in plaats van "nul gelijk".
+        if (previous == null && next.isFresh()) return WELCOME
         val call = mainCall(previous, next) ?: return null
         // Na de stand, zoals een scheidsrechter: de spelers staan dan nog op hun oude plek.
         val change = previous != null && next.winner == null &&
@@ -25,6 +28,9 @@ object RefereeCall {
         return gamesAfter > gamesBefore ||
             (gamesAfter == gamesBefore && next.tiebreak && next.pointsA + next.pointsB > previous.pointsA + previous.pointsB)
     }
+
+    private fun MatchState.isFresh(): Boolean =
+        sets.isEmpty() && gamesA == 0 && gamesB == 0 && pointsA == 0 && pointsB == 0 && winner == null
 
     private fun MatchState.totalGames(): Int = sets.sumOf { it.gamesA + it.gamesB } + gamesA + gamesB
 

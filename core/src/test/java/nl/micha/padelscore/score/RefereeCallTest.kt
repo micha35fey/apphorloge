@@ -120,4 +120,14 @@ class RefereeCallTest {
         assertEquals(true, call!!.endsWith("Kant wisselen"))
         assertEquals(!before, s.pointFor(Team.A).endsSwapped)
     }
+
+    @Test
+    fun welcomeAtTheStartOfAMatch() {
+        assertEquals("Fijne wedstrijd\nMaak er een mooie pot van", RefereeCall.announce(null, MatchState()))
+        // Terug naar 0-0 met "laatste punt terug" geeft gewoon de stand.
+        val fifteen = MatchState().pointFor(Team.A)
+        assertEquals("nul gelijk", RefereeCall.announce(fifteen, MatchState()))
+        // App opnieuw gestart midden in een partij: de stand, geen welkom.
+        assertEquals("vijftien, nul", RefereeCall.announce(null, fifteen))
+    }
 }

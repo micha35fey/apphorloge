@@ -26,6 +26,7 @@ https://github.com/micha35fey/apphorloge/releases
 
 Score omroepen: de telefoon roept de stand om als een scheidsrechter, zonder teamnamen
 ("dertig, vijftien", "voordeel"/"nadeel" vanuit de serveerder, "game", pauze, "drie, twee").
+Bij de start van een partij: "Fijne wedstrijd. Maak er een mooie pot van".
 Na "Game, set en match" volgt ongeveer 10 seconden applaus (zelf gegenereerd met
 mobile/applause_gen.py, dus vrij te gebruiken). Met "Eigen applaus kiezen" gebruik je een
 geluidsbestand van de telefoon; "Applaus testen" laat het horen.
