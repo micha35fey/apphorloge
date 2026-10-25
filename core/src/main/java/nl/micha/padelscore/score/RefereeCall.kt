@@ -86,7 +86,8 @@ object RefereeCall {
     }
 
     private val numbers = listOf(
-        "nul", "een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien",
+        // "één" met accenten, anders spreekt de stem het uit als het lidwoord "een".
+        "nul", "één", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien",
         "elf", "twaalf", "dertien", "veertien", "vijftien", "zestien", "zeventien", "achttien", "negentien", "twintig",
     )
 

@@ -39,11 +39,11 @@ class RefereeCallTest {
         var s = MatchState()
         repeat(4) { s = s.pointFor(Team.B) }
         repeat(3) { s = s.pointFor(Team.A) }
-        assertEquals("Game\neen gelijk", call(s, Team.A))
+        assertEquals("Game\néén gelijk", call(s, Team.A))
         s = s.pointFor(Team.A)
         repeat(4) { s = s.pointFor(Team.A) }
         repeat(3) { s = s.pointFor(Team.A) }
-        assertEquals("Game\ndrie, een", call(s, Team.A))
+        assertEquals("Game\ndrie, één", call(s, Team.A))
     }
 
     @Test
@@ -53,7 +53,7 @@ class RefereeCallTest {
         repeat(4) { s = s.pointFor(Team.A) }
         repeat(4 * 4) { s = s.pointFor(Team.B) }
         repeat(3) { s = s.pointFor(Team.B) }
-        assertEquals("Game, set en match\neen, zes", call(s, Team.B))
+        assertEquals("Game, set en match\néén, zes", call(s, Team.B))
         assertNull(RefereeCall.announce(s.pointFor(Team.B), s.pointFor(Team.B)))
     }
 
@@ -84,22 +84,22 @@ class RefereeCallTest {
     fun changeEndsAfterOddGames() {
         var s = MatchState(MatchSettings(changeEnds = true))
         repeat(3) { s = s.pointFor(Team.A) }
-        assertEquals("Game\neen, nul\nKant wisselen", call(s, Team.A))
+        assertEquals("Game\néén, nul\nKant wisselen", call(s, Team.A))
         s = s.pointFor(Team.A)
         assertEquals(Team.B, s.leftTeam)
         // Na game 2 geen wissel; de games in de volgorde van het scherm (Zij links).
         repeat(3) { s = s.pointFor(Team.B) }
-        assertEquals("Game\neen gelijk", call(s, Team.B))
+        assertEquals("Game\néén gelijk", call(s, Team.B))
         s = s.pointFor(Team.B)
         repeat(3) { s = s.pointFor(Team.B) }
-        assertEquals("Game\ntwee, een\nKant wisselen", call(s, Team.B))
+        assertEquals("Game\ntwee, één\nKant wisselen", call(s, Team.B))
     }
 
     @Test
     fun noChangeEndsWhenOff() {
         var s = MatchState(MatchSettings(changeEnds = false))
         repeat(3) { s = s.pointFor(Team.A) }
-        assertEquals("Game\neen, nul", call(s, Team.A))
+        assertEquals("Game\néén, nul", call(s, Team.A))
         assertEquals(Team.A, s.pointFor(Team.A).leftTeam)
     }
 

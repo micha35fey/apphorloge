@@ -15,7 +15,13 @@ object Announcer {
     private const val KEY_ENABLED = "announce"
     private const val KEY_VOICE = "voice"
     private const val PAUSE_MS = 700L
-    private const val SAMPLE = "Dertig, vijftien\nGame\ndrie, twee"
+    private const val SAMPLE = "Dertig, vijftien\nGame\ndrie, één"
+
+    // Nederlandse mannenstemmen van Spraakservices van Google, herkenbaar aan hun naam.
+    private val MALE_VOICE_HINTS = listOf("nl-nl-x-bmh", "nl-nl-x-dma", "nl-be-x-bec")
+
+    /** Lagere toon als er geen mannenstem is, zodat de stem zwaarder klinkt. */
+    private const val DEEP_PITCH = 0.75f
 
     private var tts: TextToSpeech? = null
     private var ready = false
@@ -50,7 +56,9 @@ object Announcer {
     fun voiceLabel(): String {
         val voices = dutchVoices()
         val index = voices.indexOfFirst { it.name == tts?.voice?.name }
-        return if (voices.isEmpty() || index < 0) "Standaardstem" else "Stem ${index + 1} van ${voices.size}"
+        if (voices.isEmpty() || index < 0) return "Standaardstem, lager"
+        val male = if (voices[index].looksMale()) "man" else "lager"
+        return "Stem ${index + 1} van ${voices.size}, $male"
     }
 
     /** Volgende Nederlandse stem kiezen, onthouden en een voorbeeld laten horen. */
@@ -60,6 +68,7 @@ object Announcer {
         val index = voices.indexOfFirst { it.name == tts?.voice?.name }
         val voice = voices[(index + 1) % voices.size]
         tts?.voice = voice
+        tts?.setPitch(if (voice.looksMale()) 1f else DEEP_PITCH)
         prefs(context).edit().putString(KEY_VOICE, voice.name).apply()
         say(SAMPLE)
     }
@@ -93,6 +102,7 @@ object Announcer {
         val voice = voices.firstOrNull { it.name == saved }
             ?: voices.firstOrNull { it.looksMale() }
         if (voice != null) engine.voice = voice
+        engine.setPitch(if (voice?.looksMale() == true) 1f else DEEP_PITCH)
     }
 
     /** Nederlandse stemmen die zonder internet werken; als die er niet zijn, alle Nederlandse. */
@@ -103,7 +113,7 @@ object Announcer {
 
     private fun Voice.looksMale(): Boolean {
         val text = (name + " " + features.orEmpty().joinToString(" ")).lowercase()
-        return "male" in text && "female" !in text
+        return MALE_VOICE_HINTS.any { it in text } || ("male" in text && "female" !in text)
     }
 
     // Een nieuwe stand onderbreekt de vorige, zodat je bij snelle punten altijd de actuele hoort.
