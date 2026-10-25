@@ -1,11 +1,15 @@
 package nl.micha.padelscore
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
+import android.Manifest
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -75,11 +79,6 @@ class MainActivity : ComponentActivity() {
         vm.installUpdate()
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        Updater.handleInstallStatus(this, intent)?.let { vm.updateStatus = it }
-    }
-
     fun keepScreenOn(on: Boolean) {
         if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -88,6 +87,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PadelApp(vm: MatchViewModel) {
+    // Meldingen nodig voor een update die de telefoon start terwijl de app dicht is.
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     when (vm.screen) {
         Screen.Start -> StartScreen(vm)
         Screen.Match -> MatchScreen(vm)

@@ -32,6 +32,11 @@ bovenaan het startscherm een knop "Update naar 1.x". De eerste keer vraagt het h
 app mag installeren; daarna bevestig je alleen nog de installatie.
 Dit werkt alleen als de repo openbaar is.
 
+Vanaf de telefoon: tik op "Horloge bijwerken" (of op de update-knop van de telefoon). Het
+horloge zoekt dan zelf de nieuwste versie en installeert die op de achtergrond. De eerste keer
+vraagt het horloge om bevestiging via een melding; daarna kan het zonder, omdat de app dan zelf
+de installateur is. De telefoon toont wat het horloge terugmeldt.
+
 Alle builds worden ondertekend met `app/padelscore.keystore`, zodat een nieuwe versie over de
 oude heen installeert. Niet weggooien: een andere sleutel betekent eerst de app verwijderen.
 

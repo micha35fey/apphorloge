@@ -12,10 +12,15 @@ import nl.micha.padelscore.score.MatchSettings
 import nl.micha.padelscore.score.MatchState
 import nl.micha.padelscore.score.Team
 import nl.micha.padelscore.sync.ScoreSync
+import nl.micha.padelscore.update.UpdateEvents
 import nl.micha.padelscore.update.UpdateInfo
 import nl.micha.padelscore.update.Updater
 
 enum class Screen { Start, Match, ConfirmStop }
+
+// Releases van de horloge-app op GitHub.
+const val UPDATE_TAG_PREFIX = "v"
+const val UPDATE_ASSET = "padelscore.apk"
 
 class MatchViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -34,7 +39,7 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
     var keepScreenOn by mutableStateOf(prefs.getBoolean(KEY_KEEP_SCREEN_ON, true))
         private set
 
-    private val updater = Updater(app, tagPrefix = "v", assetName = "padelscore.apk", statusActivity = MainActivity::class.java)
+    private val updater = Updater(app, tagPrefix = UPDATE_TAG_PREFIX, assetName = UPDATE_ASSET)
 
     /** Nieuwere versie op GitHub, of null als de app actueel is (of er geen internet is). */
     var update by mutableStateOf<UpdateInfo?>(null)
@@ -61,14 +66,14 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
             screen = Screen.Match
         }
         viewModelScope.launch { update = updater.check(BuildConfig.VERSION_CODE) }
+        viewModelScope.launch { UpdateEvents.status.collect { if (it != null) updateStatus = it } }
     }
 
     fun installUpdate() {
         val info = update ?: return
         updateStatus = "Downloaden..."
         viewModelScope.launch {
-            updateStatus = runCatching { updater.install(info) }
-                .fold(onSuccess = { "Installeren..." }, onFailure = { "Mislukt: ${it.message}" })
+            runCatching { updater.install(info) }.onFailure { updateStatus = "Mislukt: ${it.message}" }
         }
     }
 

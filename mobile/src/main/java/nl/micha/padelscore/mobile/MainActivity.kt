@@ -1,7 +1,6 @@
 package nl.micha.padelscore.mobile
 
 import android.Manifest
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -27,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -65,12 +65,9 @@ class MainActivity : ComponentActivity() {
             vm.updateStatus = "Sta installeren toe en tik opnieuw"
             return
         }
+        // Eerst het horloge laten bijwerken; de telefoon-app sluit zelf af tijdens zijn update.
+        vm.updateWatch()
         vm.installUpdate()
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        Updater.handleInstallStatus(this, intent)?.let { vm.updateStatus = it }
     }
 
     fun keepScreenOn(on: Boolean) {
@@ -140,6 +137,9 @@ private fun PhoneApp(vm: PhoneViewModel) {
             Button(onClick = { activity?.startUpdate() }) { Text("Update naar ${info.versionName}") }
             vm.updateStatus?.let { Text(it, color = Color.Gray, fontSize = 14.sp) }
         }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = { vm.updateWatch() }) { Text("Horloge bijwerken") }
+        vm.watchUpdateStatus?.let { Text("Horloge: $it", color = Color.Gray, fontSize = 14.sp) }
         Text("Versie ${BuildConfig.VERSION_NAME}", color = Color.DarkGray, fontSize = 12.sp)
     }
 }

@@ -23,6 +23,8 @@ android {
 dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     api("com.google.android.gms:play-services-wearable:18.2.0")
+    api("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     testImplementation("junit:junit:4.13.2")
 }

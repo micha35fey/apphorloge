@@ -9,10 +9,13 @@ import androidx.lifecycle.viewModelScope
 import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataMapItem
+import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.launch
 import nl.micha.padelscore.sync.ScoreSync
 import nl.micha.padelscore.sync.SyncedScore
+import nl.micha.padelscore.sync.UpdateMessages
+import nl.micha.padelscore.update.UpdateEvents
 import nl.micha.padelscore.update.UpdateInfo
 import nl.micha.padelscore.update.Updater
 
@@ -24,17 +27,22 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
     var score by mutableStateOf<SyncedScore?>(null)
         private set
 
-    private val updater = Updater(
-        app,
-        tagPrefix = "telefoon-v",
-        assetName = "padelscore-telefoon.apk",
-        statusActivity = MainActivity::class.java,
-    )
+    private val updater = Updater(app, tagPrefix = "telefoon-v", assetName = "padelscore-telefoon.apk")
 
     var update by mutableStateOf<UpdateInfo?>(null)
         private set
 
     var updateStatus by mutableStateOf<String?>(null)
+
+    /** Laatste melding van het horloge over zijn update. */
+    var watchUpdateStatus by mutableStateOf<String?>(null)
+        private set
+
+    private val messageClient = Wearable.getMessageClient(app)
+
+    private val messageListener = MessageClient.OnMessageReceivedListener { event ->
+        if (event.path == UpdateMessages.PATH_STATUS) watchUpdateStatus = String(event.data)
+    }
 
     private val listener = DataClient.OnDataChangedListener { events ->
         for (event in events) {
@@ -55,19 +63,27 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
             }
             items.release()
         }
+        messageClient.addListener(messageListener)
         viewModelScope.launch { update = updater.check(BuildConfig.VERSION_CODE) }
+        viewModelScope.launch { UpdateEvents.status.collect { if (it != null) updateStatus = it } }
+    }
+
+    /** Vraag het horloge om zichzelf bij te werken. */
+    fun updateWatch() {
+        watchUpdateStatus = "Verzoek verstuurd..."
+        UpdateMessages.requestWatchUpdate(getApplication())
     }
 
     fun installUpdate() {
         val info = update ?: return
         updateStatus = "Downloaden..."
         viewModelScope.launch {
-            updateStatus = runCatching { updater.install(info) }
-                .fold(onSuccess = { "Installeren..." }, onFailure = { "Mislukt: ${it.message}" })
+            runCatching { updater.install(info) }.onFailure { updateStatus = "Mislukt: ${it.message}" }
         }
     }
 
     override fun onCleared() {
         dataClient.removeListener(listener)
+        messageClient.removeListener(messageListener)
     }
 }
