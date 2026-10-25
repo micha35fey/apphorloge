@@ -132,29 +132,29 @@ private fun StartScreen(vm: MatchViewModel) {
                 )
             }
             item {
+                // Spelvorm: sets volgens de regels, of alleen games tellen zonder sets.
+                val gamesOnly = vm.settings.setsToWin == 0
                 Chip(
-                    onClick = {
-                        // Best of 3 -> 1 set -> alleen games -> best of 3
-                        val next = when (vm.settings.setsToWin) {
-                            2 -> 1
-                            1 -> 0
-                            else -> 2
-                        }
-                        vm.updateSettings(vm.settings.copy(setsToWin = next))
-                    },
-                    label = { Text("Sets") },
-                    secondaryLabel = {
-                        Text(
-                            when (vm.settings.setsToWin) {
-                                2 -> "Best of 3"
-                                1 -> "1 set"
-                                else -> "Alleen games"
-                            },
-                        )
-                    },
+                    onClick = { vm.updateSettings(vm.settings.copy(setsToWin = if (gamesOnly) 2 else 0)) },
+                    label = { Text("Spelvorm") },
+                    secondaryLabel = { Text(if (gamesOnly) "Alleen games tellen" else "Sets spelen") },
                     colors = ChipDefaults.secondaryChipColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+            if (vm.settings.setsToWin != 0) {
+                item {
+                    Chip(
+                        onClick = {
+                            val next = if (vm.settings.setsToWin == 2) 1 else 2
+                            vm.updateSettings(vm.settings.copy(setsToWin = next))
+                        },
+                        label = { Text("Aantal sets") },
+                        secondaryLabel = { Text(if (vm.settings.setsToWin == 2) "Best of 3" else "1 set") },
+                        colors = ChipDefaults.secondaryChipColors(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             item {
                 Chip(
