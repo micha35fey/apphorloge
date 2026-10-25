@@ -1,6 +1,6 @@
 # Gebruik: python3 applause_gen.py && ffmpeg -i applause.wav -c:a libvorbis -q:a 4 src/main/res/raw/applause.ogg
 # Synthetisch applaus, realistischer: veel klappers met verschillende handhouding (dof tot scherp),
-# afstand (ver weg = zachter en doffer), wisselend tempo, publieksgeroezemoes, zaalgalm, fluiten en juichen.
+# afstand, snel tempo, gejoel, publieksgeroezemoes, zaalgalm, fluiten en juichen.
 import numpy as np, wave
 rng = np.random.default_rng(11)
 SR = 44100
@@ -37,14 +37,14 @@ def clap(kind, far):
 library = [(clap(k, far), far) for far in (0.0, 0.3, 0.6, 0.85) for k in (0, 1) for _ in range(6)]
 
 out = np.zeros(n + SR)
-people = 140
+people = 170
 for p in range(people):
     far = rng.choice([0.0, 0.3, 0.6, 0.85], p=[0.08, 0.22, 0.35, 0.35])
     kind = rng.integers(0, 2)
     gain = (1.0 - 0.75 * far) * rng.uniform(0.6, 1.0)
-    period = rng.uniform(0.2, 0.3)
+    period = rng.uniform(0.15, 0.24)
     start = rng.gamma(2.0, 0.15)                     # iedereen begint snel na elkaar
-    stop = rng.uniform(5.5, 9.4) if rng.random() < 0.85 else rng.uniform(9.0, 9.8)
+    stop = rng.uniform(7.0, 9.5) if rng.random() < 0.85 else rng.uniform(9.2, 9.8)
     sounds = [s for s, fa in library if fa == far]
     tt = start
     while tt < stop:
@@ -111,14 +111,23 @@ def place(sound, at, gain, far):
     end = min(n, i + len(s))
     mix[i:end] += s[: end - i]
 
-for _ in range(5):
+# --- Gejoel: veel stemmen door elkaar, aanzwellend aan het begin ---
+roar = np.zeros(n)
+for fc in (500, 900, 1400, 2400):
+    roar += fft_filter(rng.standard_normal(n), lambda f, fc=fc: 1 / (1 + ((f - fc) / (fc * 0.35)) ** 2))
+tr = np.arange(n) / SR
+swell = np.minimum(1, tr / 0.6) * np.exp(-np.maximum(0, tr - 1.2) / 2.8)
+roar *= swell * (0.7 + 0.3 * wobble)
+mix += 0.22 * roar / np.max(np.abs(roar))
+
+for _ in range(10):
     place(whistle(rng.uniform(0.5, 1.1), rng.uniform(2000, 3000)),
-          rng.uniform(0.4, 6.5), rng.uniform(0.12, 0.2), rng.choice([0.0, 0.3, 0.6]))
-for _ in range(9):
+          rng.uniform(0.2, 7.5), rng.uniform(0.15, 0.26), rng.choice([0.0, 0.3, 0.6]))
+for _ in range(16):
     f0 = rng.choice([rng.uniform(130, 190), rng.uniform(220, 320)])   # mannen en vrouwen
     vowels = [("oe", "oe"), ("oe", "a"), ("e", "e"), ("a", "a")][rng.integers(4)]
     place(shout(rng.uniform(0.5, 1.2), f0, vowels),
-          rng.gamma(2.0, 0.9), rng.uniform(0.08, 0.15), rng.choice([0.3, 0.6, 0.85]))
+          min(6.5, rng.gamma(2.0, 1.1)), rng.uniform(0.1, 0.18), rng.choice([0.3, 0.6, 0.85]))
 
 # Zaalgalm: vroege reflecties plus een staart van ongeveer een seconde
 rev_len = int(1.2 * SR)
