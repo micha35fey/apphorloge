@@ -28,6 +28,7 @@ class ScoreListenerService : WearableListenerService() {
             val score = ScoreSync.read(DataMapItem.fromDataItem(event.dataItem).dataMap) ?: continue
             ScoreNotification.update(this, score)
             Announcer.onScore(this, score)
+            DoNotDisturb.onScore(this, score)
         }
     }
 }

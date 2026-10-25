@@ -71,6 +71,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        vm.refreshDndAccess()
+    }
+
     fun startUpdate() {
         if (!Updater.ensureInstallAllowed(this)) {
             vm.updateStatus = "Sta installeren toe en tik opnieuw"
@@ -196,6 +201,14 @@ private fun PhoneApp(vm: PhoneViewModel) {
             }
             if (vm.announce) {
                 TextButton(onClick = { vm.nextVoice() }) { Text("Stem wisselen (${vm.voiceLabel})") }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Niet storen tijdens partij", color = Color.White, fontSize = 16.sp)
+                Spacer(Modifier.width(12.dp))
+                Switch(checked = vm.dnd, onCheckedChange = { vm.updateDnd(it) })
+            }
+            if (vm.dnd && !vm.dndAccess) {
+                TextButton(onClick = { vm.updateDnd(true) }) { Text("Geef toegang tot Niet storen") }
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { vm.updateWatch() }) { Text("Horloge bijwerken") }

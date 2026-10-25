@@ -38,6 +38,14 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
     var announce by mutableStateOf(Announcer.isEnabled(app))
         private set
 
+    /** Niet storen tijdens een partij. */
+    var dnd by mutableStateOf(DoNotDisturb.isEnabled(app))
+        private set
+
+    /** Of Android de app toegang tot Niet storen heeft gegeven. */
+    var dndAccess by mutableStateOf(DoNotDisturb.hasAccess(app))
+        private set
+
     /** Welke stem er spreekt, bijvoorbeeld "Stem 2 van 5". */
     var voiceLabel by mutableStateOf("Standaardstem")
         private set
@@ -80,6 +88,17 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
     fun updateAnnounce(on: Boolean) {
         announce = on
         Announcer.setEnabled(getApplication(), on)
+    }
+
+    fun updateDnd(on: Boolean) {
+        dnd = on
+        DoNotDisturb.setEnabled(getApplication(), on)
+        if (on && !dndAccess) DoNotDisturb.requestAccess(getApplication())
+    }
+
+    /** Na terugkomen uit de instellingen: kijken of er nu toegang is. */
+    fun refreshDndAccess() {
+        dndAccess = DoNotDisturb.hasAccess(getApplication())
     }
 
     fun nextVoice() {

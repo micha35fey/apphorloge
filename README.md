@@ -28,6 +28,10 @@ Score omroepen: de telefoon roept de stand om als een scheidsrechter, zonder tea
 Met "Stem wisselen" kies je een andere Nederlandse stem, met een voorbeeld.
 Aan of uit met de schakelaar onderaan het telefoonscherm. Gebruikt het media-volume.
 
+Niet storen tijdens partij (telefoon): zet Niet storen aan zolang er op het horloge een partij
+bezig is. Meldingen zijn stil; telefoontjes, wekkers en de scheidsrechter komen door. Daarna
+komt je eigen instelling terug. De eerste keer vraagt Android om toegang tot Niet storen.
+
 ## Projectindeling
 - `app`: horloge-app (Wear OS)
 - `mobile`: telefoon-app
