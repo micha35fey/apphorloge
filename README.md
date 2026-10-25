@@ -26,6 +26,8 @@ https://github.com/micha35fey/apphorloge/releases
 
 Score omroepen: de telefoon roept de stand om als een scheidsrechter, zonder teamnamen
 ("dertig, vijftien", "voordeel"/"nadeel" vanuit de serveerder, "game", pauze, "drie, twee").
+Na "Game, set en match" volgt ongeveer 10 seconden applaus (zelf gegenereerd met
+mobile/applause_gen.py, dus vrij te gebruiken).
 Met "Stem wisselen" kies je een andere Nederlandse stem, met een voorbeeld.
 Aan of uit met de schakelaar onderaan het telefoonscherm. Gebruikt het media-volume, dus ook via een
 Bluetooth-speaker; muziek gaat even zachter tijdens de omroep en een korte stilte vooraf wekt de speaker.

@@ -4,6 +4,9 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.media.MediaPlayer
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
@@ -36,6 +39,12 @@ object Announcer {
     private var last: MatchState? = null
     private var onReady: (() -> Unit)? = null
     private var audio: AudioManager? = null
+    private var appContext: Context? = null
+
+    /** Na de omroep van het einde van de partij volgt applaus. */
+    private var applauseNext = false
+    private var player: MediaPlayer? = null
+    private val main = Handler(Looper.getMainLooper())
 
     private val attributes = AudioAttributes.Builder()
         // Media-geluid: werkt ook als de telefoon op stil of trillen staat, en gaat naar een Bluetooth-speaker.
@@ -67,8 +76,12 @@ object Announcer {
             return
         }
         val text = RefereeCall.announce(last, score.state)
+        val matchEnded = last != null && last?.winner == null && score.state.winner != null
         last = score.state
-        if (text != null && isEnabled(context)) speak(context.applicationContext, text)
+        if (text != null && isEnabled(context)) {
+            applauseNext = matchEnded
+            speak(context.applicationContext, text)
+        }
     }
 
     /** Beschrijving van de gekozen stem, bijvoorbeeld "Stem 2 van 5". */
@@ -115,11 +128,18 @@ object Announcer {
         engine.language = Locale("nl", "NL")
         engine.setAudioAttributes(attributes)
         audio = context.getSystemService(AudioManager::class.java)
+        appContext = context
         engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {}
 
             override fun onDone(utteranceId: String?) {
-                if (utteranceId == LAST_PART) audio?.abandonAudioFocusRequest(focus)
+                if (utteranceId != LAST_PART) return
+                if (applauseNext) {
+                    applauseNext = false
+                    main.post { playApplause() }
+                } else {
+                    audio?.abandonAudioFocusRequest(focus)
+                }
             }
 
             @Deprecated("Vereist door de interface")
@@ -158,8 +178,29 @@ object Announcer {
 
     // Een nieuwe stand onderbreekt de vorige, zodat je bij snelle punten altijd de actuele hoort.
     // Elke regel is een los stuk met een korte pauze ertussen.
+    /** Ongeveer 10 seconden applaus (zelf gegenereerd, zie mobile/applause_gen.py). */
+    private fun playApplause() {
+        val context = appContext ?: return
+        stopApplause()
+        val session = audio?.generateAudioSessionId() ?: return
+        player = MediaPlayer.create(context, R.raw.applause, attributes, session)?.apply {
+            setOnCompletionListener {
+                stopApplause()
+                audio?.abandonAudioFocusRequest(focus)
+            }
+            start()
+        }
+    }
+
+    private fun stopApplause() {
+        player?.release()
+        player = null
+    }
+
     private fun say(text: String) {
         val engine = tts ?: return
+        // Een nieuwe partij of stand onderbreekt het applaus.
+        main.post { stopApplause() }
         audio?.requestAudioFocus(focus)
         engine.playSilentUtterance(WAKE_MS, TextToSpeech.QUEUE_FLUSH, "wake")
         val parts = text.split(RefereeCall.PAUSE)
