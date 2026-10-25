@@ -128,11 +128,24 @@ private fun StartScreen(vm: MatchViewModel) {
             item {
                 Chip(
                     onClick = {
-                        val next = if (vm.settings.setsToWin == 2) 1 else 2
+                        // Best of 3 -> 1 set -> alleen games -> best of 3
+                        val next = when (vm.settings.setsToWin) {
+                            2 -> 1
+                            1 -> 0
+                            else -> 2
+                        }
                         vm.updateSettings(vm.settings.copy(setsToWin = next))
                     },
                     label = { Text("Sets") },
-                    secondaryLabel = { Text(if (vm.settings.setsToWin == 2) "Best of 3" else "1 set") },
+                    secondaryLabel = {
+                        Text(
+                            when (vm.settings.setsToWin) {
+                                2 -> "Best of 3"
+                                1 -> "1 set"
+                                else -> "Alleen games"
+                            },
+                        )
+                    },
                     colors = ChipDefaults.secondaryChipColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )

@@ -131,7 +131,7 @@ private fun PhoneApp(vm: PhoneViewModel) {
                 TeamPanel(state, Team.B, TeamBColor, score.active, Modifier.weight(1f))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Sets en games", color = Color.Gray, fontSize = 14.sp)
+            Text(if (state.settings.setsToWin == 0) "Games" else "Sets en games", color = Color.Gray, fontSize = 14.sp)
             Text(state.setsText(), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         }
 

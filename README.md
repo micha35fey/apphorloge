@@ -3,7 +3,7 @@
 Scoreteller voor padel op een Android-horloge (Wear OS 3 of nieuwer).
 
 ## Gebruik
-- Startscherm: kies gouden punt aan/uit, 1 set of best of 3, en wie begint met opslaan.
+- Startscherm: kies gouden punt aan/uit, best of 3, 1 set of alleen games (totaal loopt door, geen sets), en wie begint met opslaan.
 - Tik op de linkerhelft (Wij, blauw) of rechterhelft (Zij, rood) voor een punt.
 - Gele stip = dit team serveert. Bij 6-6 volgt een tiebreak tot 7 (2 verschil).
 - ↶ maakt het laatste punt ongedaan. Terugknop vraagt of je de partij wilt stoppen.

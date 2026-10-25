@@ -124,6 +124,19 @@ class PadelScoreTest {
     }
 
     @Test
+    fun gamesOnlyKeepsCountingWithoutSetsOrTiebreak() {
+        var s = MatchState(MatchSettings(setsToWin = 0))
+        repeat(7) { s = s.games(Team.A, 1).games(Team.B, 1) }
+        s = s.games(Team.A, 2)
+        assertEquals(9, s.gamesA)
+        assertEquals(7, s.gamesB)
+        assertTrue(s.sets.isEmpty())
+        assertTrue(!s.tiebreak)
+        assertNull(s.winner)
+        assertEquals("15", s.pointFor(Team.B).pointLabel(Team.B))
+    }
+
+    @Test
     fun encodeDecodeRoundTrip() {
         var s = MatchState(MatchSettings(goldenPoint = false, setsToWin = 2, firstServer = Team.B))
         s = s.games(Team.A, 6).games(Team.B, 3).points(Team.A, 2)

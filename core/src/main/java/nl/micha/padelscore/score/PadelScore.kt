@@ -13,7 +13,10 @@ enum class Team {
 data class MatchSettings(
     /** Gouden punt: bij 40-40 beslist het volgende punt de game. Uit = voordeel-regel. */
     val goldenPoint: Boolean = true,
-    /** Aantal sets nodig om te winnen: 1 (één set) of 2 (best of 3). */
+    /**
+     * Aantal sets nodig om te winnen: 1 (één set) of 2 (best of 3).
+     * 0 = alleen games tellen: geen sets en geen tiebreak, het totaal loopt door tot je stopt.
+     */
     val setsToWin: Int = 2,
     val firstServer: Team = Team.A,
 )
@@ -102,6 +105,7 @@ data class MatchState(
         // Na een tiebreak begint het team dat in de tiebreak als eerste ontving; dat is ook gewoon "de ander".
         val nextServer = gameServer.other
         val base = copy(pointsA = 0, pointsB = 0, gameServer = nextServer)
+        if (settings.setsToWin == 0) return base.copy(gamesA = ga, gamesB = gb)
 
         val setWon = tiebreak || ((ga >= 6 || gb >= 6) && kotlin.math.abs(ga - gb) >= 2)
         if (setWon) {
