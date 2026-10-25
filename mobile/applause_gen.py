@@ -1,6 +1,6 @@
 # Gebruik: python3 applause_gen.py && ffmpeg -i applause.wav -c:a libvorbis -q:a 4 src/main/res/raw/applause.ogg
 # Synthetisch applaus, realistischer: veel klappers met verschillende handhouding (dof tot scherp),
-# afstand (ver weg = zachter en doffer), wisselend tempo, publieksgeroezemoes en zaalgalm.
+# afstand (ver weg = zachter en doffer), wisselend tempo, publieksgeroezemoes, zaalgalm, fluiten en juichen.
 import numpy as np, wave
 rng = np.random.default_rng(11)
 SR = 44100
@@ -63,6 +63,62 @@ wobble = 0.6 + 0.4 * fft_filter(rng.standard_normal(n), lambda f: (f < 3).astype
 murmur *= wobble / np.max(np.abs(murmur))
 
 mix = out / np.max(np.abs(out)) + 0.06 * murmur
+
+# --- Fluiten: vingerfluit, een hoge toon die omhoog en weer omlaag glijdt, met wat adem ---
+def whistle(length, f0):
+    t = np.arange(int(length * SR)) / SR
+    shape = rng.choice(["up", "updown", "double"])
+    if shape == "up":
+        pitch = f0 * (1 + 0.35 * np.minimum(1, t / (0.6 * length)))
+    elif shape == "updown":
+        pitch = f0 * (1 + 0.4 * np.sin(np.pi * t / length))
+    else:
+        pitch = f0 * (1 + 0.3 * (np.sin(2 * np.pi * t / length) > 0))
+    pitch = pitch * (1 + 0.01 * np.sin(2 * np.pi * rng.uniform(5, 7) * t))
+    phase = 2 * np.pi * np.cumsum(pitch) / SR
+    tone = np.sin(phase) + 0.15 * np.sin(2 * phase)
+    breath = fft_filter(rng.standard_normal(len(t)), lambda f: peak(f, f0 * 1.2, 3))
+    env = np.minimum(1, t / 0.04) * np.minimum(1, (length - t) / 0.08)
+    return (tone + 0.15 * breath / np.max(np.abs(breath))) * env
+
+# --- Roepen: "woo!" en "hé!" uit een stemtoon (zaagtand) met klinkerformanten ---
+VOWELS = {"oe": (320, 800, 2300), "a": (750, 1200, 2500), "e": (450, 1900, 2600)}
+def shout(length, f0, vowels):
+    t = np.arange(int(length * SR)) / SR
+    # toonhoogte gaat omhoog en zakt aan het eind, zoals bij juichen
+    contour = f0 * (1 + 0.45 * np.sin(np.pi * np.minimum(1, t / length) ** 0.7))
+    contour = contour * (1 + 0.02 * np.sin(2 * np.pi * 6 * t))
+    phase = np.cumsum(contour) / SR
+    saw = 2 * (phase % 1) - 1
+    voice = saw + 0.3 * fft_filter(rng.standard_normal(len(t)), lambda f: (f > 1500).astype(float))
+    out = np.zeros(len(t))
+    # klinker loopt over van de eerste naar de tweede (bijvoorbeeld w-oe naar a)
+    a_form, b_form = VOWELS[vowels[0]], VOWELS[vowels[1]]
+    mix_ab = np.minimum(1, t / (0.5 * length))
+    for (fa, fb, bw) in zip(a_form, b_form, (90, 120, 160)):
+        for frac in (0.0, 0.5, 1.0):
+            fc = fa + (fb - fa) * frac
+            band = fft_filter(voice, lambda f, fc=fc: 1 / (1 + ((f - fc) / bw) ** 2))
+            weight = 1 - np.abs(mix_ab - frac) * 2
+            out += band * np.clip(weight, 0, 1)
+    env = np.minimum(1, t / 0.05) * np.minimum(1, (length - t) / 0.15) ** 1.5
+    return out * env
+
+def place(sound, at, gain, far):
+    s = fft_filter(sound, lambda f: 1 / (1 + (f / (9000 - 6000 * far)) ** 3)) if far > 0 else sound
+    s = s / np.max(np.abs(s)) * gain
+    i = int(at * SR)
+    end = min(n, i + len(s))
+    mix[i:end] += s[: end - i]
+
+for _ in range(5):
+    place(whistle(rng.uniform(0.5, 1.1), rng.uniform(2000, 3000)),
+          rng.uniform(0.4, 6.5), rng.uniform(0.12, 0.2), rng.choice([0.0, 0.3, 0.6]))
+for _ in range(9):
+    f0 = rng.choice([rng.uniform(130, 190), rng.uniform(220, 320)])   # mannen en vrouwen
+    vowels = [("oe", "oe"), ("oe", "a"), ("e", "e"), ("a", "a")][rng.integers(4)]
+    place(shout(rng.uniform(0.5, 1.2), f0, vowels),
+          rng.gamma(2.0, 0.9), rng.uniform(0.08, 0.15), rng.choice([0.3, 0.6, 0.85]))
 
 # Zaalgalm: vroege reflecties plus een staart van ongeveer een seconde
 rev_len = int(1.2 * SR)
