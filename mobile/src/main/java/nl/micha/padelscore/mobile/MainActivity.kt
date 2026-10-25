@@ -191,6 +191,9 @@ private fun PhoneApp(vm: PhoneViewModel) {
                 Spacer(Modifier.width(12.dp))
                 Switch(checked = vm.announce, onCheckedChange = { vm.updateAnnounce(it) })
             }
+            if (vm.announce) {
+                TextButton(onClick = { vm.nextVoice() }) { Text("Stem wisselen (${vm.voiceLabel})") }
+            }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { vm.updateWatch() }) { Text("Horloge bijwerken") }
             vm.watchUpdateStatus?.let { Text("Horloge: $it", color = Color.Gray, fontSize = 14.sp) }

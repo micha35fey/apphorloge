@@ -18,11 +18,12 @@ class RefereeCallTest {
     }
 
     @Test
-    fun deuceAndAdvantage() {
-        var s = MatchState(MatchSettings(goldenPoint = false))
+    fun advantageAndDisadvantageForTheServer() {
+        var s = MatchState(MatchSettings(goldenPoint = false, firstServer = Team.A))
         repeat(3) { s = s.pointFor(Team.A).pointFor(Team.B) }
-        assertEquals("Deuce", RefereeCall.scoreCall(s))
-        assertEquals("Voordeel zij", call(s, Team.B))
+        assertEquals("Veertig gelijk", RefereeCall.scoreCall(s))
+        assertEquals("Voordeel", call(s, Team.A))
+        assertEquals("Nadeel", call(s, Team.B))
     }
 
     @Test
@@ -30,14 +31,19 @@ class RefereeCallTest {
         var s = MatchState(MatchSettings(goldenPoint = true))
         repeat(2) { s = s.pointFor(Team.A).pointFor(Team.B) }
         s = s.pointFor(Team.A)
-        assertEquals("Veertig gelijk, gouden punt", call(s, Team.B))
+        assertEquals("Veertig gelijk. Gouden punt", call(s, Team.B))
     }
 
     @Test
-    fun gameAndLead() {
+    fun gameThenPauseThenGames() {
         var s = MatchState()
+        repeat(4) { s = s.pointFor(Team.B) }
         repeat(3) { s = s.pointFor(Team.A) }
-        assertEquals("Game wij. wij leidt een, nul", call(s, Team.A))
+        assertEquals("Game\neen gelijk", call(s, Team.A))
+        s = s.pointFor(Team.A)
+        repeat(4) { s = s.pointFor(Team.A) }
+        repeat(3) { s = s.pointFor(Team.A) }
+        assertEquals("Game\ndrie, een", call(s, Team.A))
     }
 
     @Test
@@ -47,7 +53,7 @@ class RefereeCallTest {
         repeat(4) { s = s.pointFor(Team.A) }
         repeat(4 * 4) { s = s.pointFor(Team.B) }
         repeat(3) { s = s.pointFor(Team.B) }
-        assertEquals("Game, set en match zij. zes, een", call(s, Team.B))
+        assertEquals("Game, set en match\neen, zes", call(s, Team.B))
         assertNull(RefereeCall.announce(s.pointFor(Team.B), s.pointFor(Team.B)))
     }
 
@@ -55,7 +61,7 @@ class RefereeCallTest {
     fun setInBestOfThree() {
         var s = MatchState()
         repeat(5 * 4 + 3) { s = s.pointFor(Team.A) }
-        assertEquals("Game en set wij, zes, nul", call(s, Team.A))
+        assertEquals("Game en set\nzes, nul", call(s, Team.A))
     }
 
     @Test
@@ -64,7 +70,7 @@ class RefereeCallTest {
         repeat(5) { repeat(4) { s = s.pointFor(Team.A) }; repeat(4) { s = s.pointFor(Team.B) } }
         repeat(4) { s = s.pointFor(Team.A) }
         repeat(3) { s = s.pointFor(Team.B) }
-        assertEquals("Game zij. zes gelijk. Tiebreak", call(s, Team.B))
+        assertEquals("Game\nzes gelijk. Tiebreak", call(s, Team.B))
     }
 
     @Test

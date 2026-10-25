@@ -1,34 +1,30 @@
 package nl.micha.padelscore.score
 
 /**
- * Wat een scheidsrechter roept na een wijziging van de stand.
- * Punten worden genoemd vanuit de serveerder, games en sets vanuit de winnaar.
+ * Wat een scheidsrechter roept na een wijziging van de stand, zonder teamnamen.
+ * Punten worden genoemd vanuit de serveerder (voordeel/nadeel), games in de volgorde van
+ * het scherm (Wij links, Zij rechts). Een regelovergang ("\n") betekent een korte pauze.
  */
 object RefereeCall {
+    const val PAUSE = "\n"
 
     /** Tekst om om te roepen bij de overgang van [previous] naar [next], of null als er niets te melden is. */
     fun announce(previous: MatchState?, next: MatchState): String? {
         if (previous == next) return null
-        val winner = next.winner
-        if (winner != null) {
+        if (next.winner != null) {
             if (previous?.winner != null) return null
-            val sets = next.sets.joinToString(", ") { set -> gamesFor(set.gamesA, set.gamesB, winner) }
-            return if (next.settings.setsToWin == 0) {
-                "Game, set en match ${name(winner)}"
-            } else {
-                "Game, set en match ${name(winner)}. $sets"
-            }
+            if (next.settings.setsToWin == 0) return "Game, set en match${PAUSE}${gamesCall(next.gamesA, next.gamesB)}"
+            val sets = next.sets.joinToString(", ") { "${number(it.gamesA)}, ${number(it.gamesB)}" }
+            return "Game, set en match$PAUSE$sets"
         }
         if (previous != null && next.sets.size > previous.sets.size) {
             val set = next.sets.last()
-            val setWinner = if (set.gamesA > set.gamesB) Team.A else Team.B
-            return "Game en set ${name(setWinner)}, ${gamesFor(set.gamesA, set.gamesB, setWinner)}"
+            return "Game en set$PAUSE${number(set.gamesA)}, ${number(set.gamesB)}"
         }
         if (previous != null && next.sets.size == previous.sets.size &&
             next.gamesA + next.gamesB > previous.gamesA + previous.gamesB
         ) {
-            val gameWinner = if (next.gamesA > previous.gamesA) Team.A else Team.B
-            val call = "Game ${name(gameWinner)}. ${gamesCall(next)}"
+            val call = "Game$PAUSE${gamesCall(next.gamesA, next.gamesB)}"
             return if (next.tiebreak) "$call. Tiebreak" else call
         }
         return scoreCall(next)
@@ -36,9 +32,8 @@ object RefereeCall {
 
     /** De huidige puntenstand, vanuit de serveerder. */
     fun scoreCall(state: MatchState): String {
-        val server = state.server
-        val serverPoints = state.points(server)
-        val receiverPoints = state.points(server.other)
+        val serverPoints = if (state.server == Team.A) state.pointsA else state.pointsB
+        val receiverPoints = if (state.server == Team.A) state.pointsB else state.pointsA
         if (state.tiebreak) {
             return if (serverPoints == receiverPoints) {
                 "${number(serverPoints)} gelijk"
@@ -48,28 +43,18 @@ object RefereeCall {
         }
         if (serverPoints >= 3 && receiverPoints >= 3) {
             return when {
-                serverPoints == receiverPoints && state.settings.goldenPoint -> "Veertig gelijk, gouden punt"
-                serverPoints == receiverPoints -> "Deuce"
-                serverPoints > receiverPoints -> "Voordeel ${name(server)}"
-                else -> "Voordeel ${name(server.other)}"
+                serverPoints == receiverPoints && state.settings.goldenPoint -> "Veertig gelijk. Gouden punt"
+                serverPoints == receiverPoints -> "Veertig gelijk"
+                serverPoints > receiverPoints -> "Voordeel"
+                else -> "Nadeel"
             }
         }
         if (serverPoints == receiverPoints) return "${pointWord(serverPoints)} gelijk"
         return "${pointWord(serverPoints)}, ${pointWord(receiverPoints)}"
     }
 
-    private fun gamesCall(state: MatchState): String = when {
-        state.gamesA == state.gamesB -> "${number(state.gamesA)} gelijk"
-        state.gamesA > state.gamesB -> "${name(Team.A)} leidt ${number(state.gamesA)}, ${number(state.gamesB)}"
-        else -> "${name(Team.B)} leidt ${number(state.gamesB)}, ${number(state.gamesA)}"
-    }
-
-    private fun gamesFor(gamesA: Int, gamesB: Int, first: Team): String =
-        if (first == Team.A) "${number(gamesA)}, ${number(gamesB)}" else "${number(gamesB)}, ${number(gamesA)}"
-
-    private fun MatchState.points(team: Team): Int = if (team == Team.A) pointsA else pointsB
-
-    private fun name(team: Team): String = team.label.lowercase()
+    private fun gamesCall(gamesA: Int, gamesB: Int): String =
+        if (gamesA == gamesB) "${number(gamesA)} gelijk" else "${number(gamesA)}, ${number(gamesB)}"
 
     private fun pointWord(points: Int): String = when (points) {
         0 -> "nul"

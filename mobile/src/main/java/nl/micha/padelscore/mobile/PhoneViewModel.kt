@@ -38,6 +38,10 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
     var announce by mutableStateOf(Announcer.isEnabled(app))
         private set
 
+    /** Welke stem er spreekt, bijvoorbeeld "Stem 2 van 5". */
+    var voiceLabel by mutableStateOf("Standaardstem")
+        private set
+
     /** Laatste melding van het horloge over zijn update. */
     var watchUpdateStatus by mutableStateOf<String?>(null)
         private set
@@ -68,6 +72,7 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
             items.release()
         }
         messageClient.addListener(messageListener)
+        Announcer.prepare(app) { voiceLabel = Announcer.voiceLabel() }
         viewModelScope.launch { update = updater.check(BuildConfig.VERSION_CODE) }
         viewModelScope.launch { UpdateEvents.status.collect { if (it != null) updateStatus = it } }
     }
@@ -75,6 +80,11 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
     fun updateAnnounce(on: Boolean) {
         announce = on
         Announcer.setEnabled(getApplication(), on)
+    }
+
+    fun nextVoice() {
+        Announcer.nextVoice(getApplication())
+        voiceLabel = Announcer.voiceLabel()
     }
 
     /** Vraag het horloge om zichzelf bij te werken. */

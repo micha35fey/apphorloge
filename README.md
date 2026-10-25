@@ -20,9 +20,10 @@ van de telefoon aan als de app open staat.
 Download: `padelscore-telefoon.apk` bij de nieuwste release met "telefoon" in de naam op
 https://github.com/micha35fey/apphorloge/releases
 
-Score omroepen: de telefoon roept de stand om als een scheidsrechter ("dertig, vijftien",
-"voordeel wij", "game zij, twee gelijk", "game en set wij, zes, vier"). Aan of uit met de
-schakelaar onderaan het telefoonscherm. Gebruikt het media-volume.
+Score omroepen: de telefoon roept de stand om als een scheidsrechter, zonder teamnamen
+("dertig, vijftien", "voordeel"/"nadeel" vanuit de serveerder, "game", pauze, "drie, twee").
+Met "Stem wisselen" kies je een andere Nederlandse stem, met een voorbeeld.
+Aan of uit met de schakelaar onderaan het telefoonscherm. Gebruikt het media-volume.
 
 ## Projectindeling
 - `app`: horloge-app (Wear OS)
