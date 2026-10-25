@@ -27,6 +27,7 @@ class ScoreListenerService : WearableListenerService() {
             if (event.type != DataEvent.TYPE_CHANGED || event.dataItem.uri.path != ScoreSync.PATH) continue
             val score = ScoreSync.read(DataMapItem.fromDataItem(event.dataItem).dataMap) ?: continue
             ScoreNotification.update(this, score)
+            Announcer.onScore(this, score)
         }
     }
 }

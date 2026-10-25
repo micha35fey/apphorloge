@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
@@ -184,6 +185,11 @@ private fun PhoneApp(vm: PhoneViewModel) {
                         }) { Text("Download via browser") }
                     }
                 }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Score omroepen", color = Color.White, fontSize = 16.sp)
+                Spacer(Modifier.width(12.dp))
+                Switch(checked = vm.announce, onCheckedChange = { vm.updateAnnounce(it) })
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { vm.updateWatch() }) { Text("Horloge bijwerken") }

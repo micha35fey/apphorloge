@@ -34,6 +34,10 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
 
     var updateStatus by mutableStateOf<String?>(null)
 
+    /** Stand omroepen als een scheidsrechter. */
+    var announce by mutableStateOf(Announcer.isEnabled(app))
+        private set
+
     /** Laatste melding van het horloge over zijn update. */
     var watchUpdateStatus by mutableStateOf<String?>(null)
         private set
@@ -66,6 +70,11 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
         messageClient.addListener(messageListener)
         viewModelScope.launch { update = updater.check(BuildConfig.VERSION_CODE) }
         viewModelScope.launch { UpdateEvents.status.collect { if (it != null) updateStatus = it } }
+    }
+
+    fun updateAnnounce(on: Boolean) {
+        announce = on
+        Announcer.setEnabled(getApplication(), on)
     }
 
     /** Vraag het horloge om zichzelf bij te werken. */
