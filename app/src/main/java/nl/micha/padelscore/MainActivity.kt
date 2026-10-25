@@ -172,6 +172,16 @@ private fun StartScreen(vm: MatchViewModel) {
                 }
             }
             item {
+                ToggleChip(
+                    checked = vm.settings.changeEnds,
+                    onCheckedChange = { vm.updateSettings(vm.settings.copy(changeEnds = it)) },
+                    label = { Text("Kant wisselen") },
+                    secondaryLabel = { Text(if (vm.settings.changeEnds) "Na oneven games" else "Blijven staan") },
+                    toggleControl = { Switch(checked = vm.settings.changeEnds) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
                 Chip(
                     onClick = { vm.updateSettings(vm.settings.copy(firstServer = vm.settings.firstServer.other)) },
                     label = { Text("Eerste opslag") },
@@ -229,27 +239,20 @@ private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        // Bij kant wisselen schuiven de vlakken mee: elk team houdt zijn eigen kleur.
         Row(modifier = Modifier.fillMaxSize()) {
-            TeamHalf(
-                state = state,
-                team = Team.A,
-                color = TeamAColor,
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    vm.point(Team.A)
-                },
-            )
-            TeamHalf(
-                state = state,
-                team = Team.B,
-                color = TeamBColor,
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    vm.point(Team.B)
-                },
-            )
+            for (team in listOf(state.leftTeam, state.leftTeam.other)) {
+                TeamHalf(
+                    state = state,
+                    team = team,
+                    color = if (team == Team.A) TeamAColor else TeamBColor,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        vm.point(team)
+                    },
+                )
+            }
         }
 
         // Bovenaan: gespeelde sets en de status van de game.
@@ -259,7 +262,7 @@ private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
         ) {
             if (state.sets.isNotEmpty()) {
                 Text(
-                    text = state.sets.joinToString("  ") { "${it.gamesA}-${it.gamesB}" },
+                    text = state.sets.joinToString("  ") { state.leftFirst(it.gamesA, it.gamesB) },
                     fontSize = 13.sp,
                     color = Color.White,
                 )
@@ -317,6 +320,15 @@ private fun MenuScreen(vm: MatchViewModel) {
                     onCheckedChange = { vm.setGoldenPoint(it) },
                     label = { Text("Gouden punt") },
                     toggleControl = { Switch(checked = vm.state.settings.goldenPoint) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                ToggleChip(
+                    checked = vm.state.settings.changeEnds,
+                    onCheckedChange = { vm.setChangeEnds(it) },
+                    label = { Text("Kant wisselen") },
+                    toggleControl = { Switch(checked = vm.state.settings.changeEnds) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -418,6 +430,10 @@ private fun ConfirmStopScreen(vm: MatchViewModel) {
 
 private fun teamName(team: Team): String = team.label
 
+/** Games in de volgorde van het scherm: eerst het team dat links staat. */
+private fun MatchState.leftFirst(gamesA: Int, gamesB: Int): String =
+    if (leftTeam == Team.A) "$gamesA-$gamesB" else "$gamesB-$gamesA"
+
 /**
  * Gedimde stand: zwart met grijze en witte tekst, geen vlakken en geen knoppen.
  * Zuinig, en het scherm brandt niet in. Tik, knop of pols draaien maakt de app weer actief.
@@ -426,13 +442,13 @@ private fun teamName(team: Team): String = team.label
 private fun AmbientMatch(state: MatchState) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         Text(
-            text = state.statusText ?: state.sets.joinToString("  ") { "${it.gamesA}-${it.gamesB}" },
+            text = state.statusText ?: state.sets.joinToString("  ") { state.leftFirst(it.gamesA, it.gamesB) },
             fontSize = 13.sp,
             color = Color.Gray,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 22.dp),
         )
         Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-            for (team in Team.entries) {
+            for (team in listOf(state.leftTeam, state.leftTeam.other)) {
                 val games = if (team == Team.A) state.gamesA else state.gamesB
                 Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     val serving = state.winner == null && state.server == team

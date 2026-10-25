@@ -79,4 +79,45 @@ class RefereeCallTest {
         val after = before.pointFor(Team.A)
         assertEquals("vijftien, nul", RefereeCall.announce(after, before))
     }
+
+    @Test
+    fun changeEndsAfterOddGames() {
+        var s = MatchState(MatchSettings(changeEnds = true))
+        repeat(3) { s = s.pointFor(Team.A) }
+        assertEquals("Game\neen, nul\nKant wisselen", call(s, Team.A))
+        s = s.pointFor(Team.A)
+        assertEquals(Team.B, s.leftTeam)
+        // Na game 2 geen wissel; de games in de volgorde van het scherm (Zij links).
+        repeat(3) { s = s.pointFor(Team.B) }
+        assertEquals("Game\neen gelijk", call(s, Team.B))
+        s = s.pointFor(Team.B)
+        repeat(3) { s = s.pointFor(Team.B) }
+        assertEquals("Game\ntwee, een\nKant wisselen", call(s, Team.B))
+    }
+
+    @Test
+    fun noChangeEndsWhenOff() {
+        var s = MatchState(MatchSettings(changeEnds = false))
+        repeat(3) { s = s.pointFor(Team.A) }
+        assertEquals("Game\neen, nul", call(s, Team.A))
+        assertEquals(Team.A, s.pointFor(Team.A).leftTeam)
+    }
+
+    @Test
+    fun undoDoesNotAnnounceChangeEnds() {
+        var s = MatchState(MatchSettings(changeEnds = true))
+        repeat(3) { s = s.pointFor(Team.A) }
+        val after = s.pointFor(Team.A)
+        assertEquals("veertig, nul", RefereeCall.announce(after, s))
+    }
+
+    @Test
+    fun changeEndsEverySixTiebreakPoints() {
+        var s = MatchState(MatchSettings(changeEnds = true), gamesA = 6, gamesB = 6, tiebreak = true)
+        val before = s.endsSwapped
+        repeat(5) { s = s.pointFor(if (it % 2 == 0) Team.A else Team.B) }
+        val call = call(s, Team.A)
+        assertEquals(true, call!!.endsWith("Kant wisselen"))
+        assertEquals(!before, s.pointFor(Team.A).endsSwapped)
+    }
 }

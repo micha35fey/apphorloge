@@ -142,5 +142,10 @@ class PadelScoreTest {
         s = s.games(Team.A, 6).games(Team.B, 3).points(Team.A, 2)
         assertEquals(s, MatchState.decode(s.encode()))
         assertNull(MatchState.decode("rommel"))
+        val withEnds = MatchState(MatchSettings(changeEnds = true)).games(Team.A, 1)
+        assertEquals(withEnds, MatchState.decode(withEnds.encode()))
+        // Opgeslagen door een oudere versie, zonder het veld voor kant wisselen.
+        val old = "1;2;A;;1;0;0;0;0;B;"
+        assertEquals(1, MatchState.decode(old)?.gamesA)
     }
 }

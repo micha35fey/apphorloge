@@ -19,6 +19,8 @@ data class MatchSettings(
      */
     val setsToWin: Int = 2,
     val firstServer: Team = Team.A,
+    /** Van kant wisselen na elke oneven game, en in de tiebreak na elke 6 punten. */
+    val changeEnds: Boolean = false,
 )
 
 data class SetScore(val gamesA: Int, val gamesB: Int)
@@ -45,6 +47,23 @@ data class MatchState(
             val played = pointsA + pointsB
             return if (((played + 1) / 2) % 2 == 0) gameServer else gameServer.other
         }
+
+    /**
+     * True als de teams van kant gewisseld zijn: Wij staat dan rechts in beeld.
+     * Wisselen gebeurt na elke oneven game over de hele partij, en in de tiebreak na elke 6 punten.
+     */
+    val endsSwapped: Boolean
+        get() {
+            if (!settings.changeEnds) return false
+            val games = sets.sumOf { it.gamesA + it.gamesB } + gamesA + gamesB
+            // Na game 1, 3, 5, ... wordt er gewisseld: na n games is dat (n + 1) / 2 keer.
+            val gameChanges = (games + 1) / 2
+            val tiebreakChanges = if (tiebreak) (pointsA + pointsB) / 6 else 0
+            return (gameChanges + tiebreakChanges) % 2 == 1
+        }
+
+    /** Het team dat links in beeld staat. */
+    val leftTeam: Team get() = if (endsSwapped) Team.B else Team.A
 
     val isGoldenPointMoment: Boolean
         get() = !tiebreak && settings.goldenPoint && pointsA == 3 && pointsB == 3
@@ -127,16 +146,19 @@ data class MatchState(
         if (tiebreak) 1 else 0,
         gameServer.name,
         winner?.name ?: "",
+        if (settings.changeEnds) 1 else 0,
     ).joinToString(";")
 
     companion object {
         fun decode(text: String): MatchState? = runCatching {
             val f = text.split(";")
-            require(f.size == 11)
+            // 11 velden: opgeslagen door een versie van voor "kant wisselen".
+            require(f.size == 11 || f.size == 12)
             val settings = MatchSettings(
                 goldenPoint = f[0] == "1",
                 setsToWin = f[1].toInt(),
                 firstServer = Team.valueOf(f[2]),
+                changeEnds = f.getOrNull(11) == "1",
             )
             val sets = if (f[3].isEmpty()) emptyList() else f[3].split(",").map {
                 val (x, y) = it.split("-")

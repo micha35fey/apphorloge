@@ -138,8 +138,11 @@ private fun PhoneApp(vm: PhoneViewModel) {
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    TeamPanel(state, Team.A, TeamAColor, score.active, Modifier.weight(1f))
-                    TeamPanel(state, Team.B, TeamBColor, score.active, Modifier.weight(1f))
+                    // Bij kant wisselen schuiven de vlakken mee, met hun eigen kleur.
+                    for (team in listOf(state.leftTeam, state.leftTeam.other)) {
+                        val color = if (team == Team.A) TeamAColor else TeamBColor
+                        TeamPanel(state, team, color, score.active, Modifier.weight(1f))
+                    }
                 }
                 val status = if (score.active) state.statusText else "Geen partij bezig"
                 if (status != null) {

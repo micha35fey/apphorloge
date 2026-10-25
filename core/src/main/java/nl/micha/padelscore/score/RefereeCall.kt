@@ -11,20 +11,40 @@ object RefereeCall {
     /** Tekst om om te roepen bij de overgang van [previous] naar [next], of null als er niets te melden is. */
     fun announce(previous: MatchState?, next: MatchState): String? {
         if (previous == next) return null
+        val call = mainCall(previous, next) ?: return null
+        // Na de stand, zoals een scheidsrechter: de spelers staan dan nog op hun oude plek.
+        val change = previous != null && next.winner == null &&
+            previous.endsSwapped != next.endsSwapped && movedForward(previous, next)
+        return if (change) "$call${PAUSE}Kant wisselen" else call
+    }
+
+    /** Een gespeeld punt, geen "laatste punt terug". Kant wisselen gebeurt alleen na een game of tiebreakpunt. */
+    private fun movedForward(previous: MatchState, next: MatchState): Boolean {
+        val gamesBefore = previous.totalGames()
+        val gamesAfter = next.totalGames()
+        return gamesAfter > gamesBefore ||
+            (gamesAfter == gamesBefore && next.tiebreak && next.pointsA + next.pointsB > previous.pointsA + previous.pointsB)
+    }
+
+    private fun MatchState.totalGames(): Int = sets.sumOf { it.gamesA + it.gamesB } + gamesA + gamesB
+
+    private fun mainCall(previous: MatchState?, next: MatchState): String? {
+        // Games in de volgorde waarin de spelers ze zien: de kant van voor het punt.
+        val left = previous?.leftTeam ?: next.leftTeam
         if (next.winner != null) {
             if (previous?.winner != null) return null
-            if (next.settings.setsToWin == 0) return "Game, set en match${PAUSE}${gamesCall(next.gamesA, next.gamesB)}"
-            val sets = next.sets.joinToString(", ") { "${number(it.gamesA)}, ${number(it.gamesB)}" }
+            if (next.settings.setsToWin == 0) return "Game, set en match${PAUSE}${gamesCall(next.gamesA, next.gamesB, left)}"
+            val sets = next.sets.joinToString(", ") { gamesCall(it.gamesA, it.gamesB, left) }
             return "Game, set en match$PAUSE$sets"
         }
         if (previous != null && next.sets.size > previous.sets.size) {
             val set = next.sets.last()
-            return "Game en set$PAUSE${number(set.gamesA)}, ${number(set.gamesB)}"
+            return "Game en set$PAUSE${gamesCall(set.gamesA, set.gamesB, left)}"
         }
         if (previous != null && next.sets.size == previous.sets.size &&
             next.gamesA + next.gamesB > previous.gamesA + previous.gamesB
         ) {
-            val call = "Game$PAUSE${gamesCall(next.gamesA, next.gamesB)}"
+            val call = "Game$PAUSE${gamesCall(next.gamesA, next.gamesB, left)}"
             return if (next.tiebreak) "$call. Tiebreak" else call
         }
         return scoreCall(next)
@@ -53,8 +73,10 @@ object RefereeCall {
         return "${pointWord(serverPoints)}, ${pointWord(receiverPoints)}"
     }
 
-    private fun gamesCall(gamesA: Int, gamesB: Int): String =
-        if (gamesA == gamesB) "${number(gamesA)} gelijk" else "${number(gamesA)}, ${number(gamesB)}"
+    private fun gamesCall(gamesA: Int, gamesB: Int, left: Team): String {
+        val (first, second) = if (left == Team.A) gamesA to gamesB else gamesB to gamesA
+        return if (first == second) "${number(first)} gelijk" else "${number(first)}, ${number(second)}"
+    }
 
     private fun pointWord(points: Int): String = when (points) {
         0 -> "nul"

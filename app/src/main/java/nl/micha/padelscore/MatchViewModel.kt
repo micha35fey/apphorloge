@@ -123,6 +123,13 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
         save()
     }
 
+    /** Kant wisselen aan of uit zetten tijdens de partij. */
+    fun setChangeEnds(on: Boolean) {
+        settings = settings.copy(changeEnds = on)
+        state = state.copy(settings = state.settings.copy(changeEnds = on))
+        save()
+    }
+
     fun askStop() {
         screen = Screen.ConfirmStop
     }
