@@ -64,6 +64,7 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
             state = saved
             settings = saved.settings
             screen = Screen.Match
+            if (saved.winner == null) MatchNotification.show(app, saved)
         }
         viewModelScope.launch { update = updater.check(BuildConfig.VERSION_CODE) }
         viewModelScope.launch { UpdateEvents.status.collect { if (it != null) updateStatus = it } }
@@ -119,6 +120,7 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
         history.clear()
         prefs.edit().remove(KEY_STATE).remove(KEY_HISTORY).apply()
         ScoreSync.send(getApplication(), state, active = false)
+        MatchNotification.hide(getApplication())
         screen = Screen.Start
     }
 
@@ -128,6 +130,8 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
             .putString(KEY_HISTORY, history.joinToString("\n") { it.encode() })
             .apply()
         ScoreSync.send(getApplication(), state, active = true)
+        if (state.winner == null) MatchNotification.show(getApplication(), state)
+        else MatchNotification.hide(getApplication())
     }
 
     private companion object {

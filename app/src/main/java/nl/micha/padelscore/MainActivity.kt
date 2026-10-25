@@ -28,6 +28,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.wear.ambient.AmbientLifecycleObserver
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.Button
@@ -62,11 +66,30 @@ private val TeamBColor = Color(0xFFC62828)
 class MainActivity : ComponentActivity() {
     private val vm: MatchViewModel by viewModels()
 
+    /** True als het scherm gedimd is (ambient mode). De app blijft dan voorop staan. */
+    private var ambient by mutableStateOf(false)
+
+    private val ambientObserver = AmbientLifecycleObserver(
+        this,
+        object : AmbientLifecycleObserver.AmbientLifecycleCallback {
+            override fun onEnterAmbient(ambientDetails: AmbientLifecycleObserver.AmbientDetails) {
+                ambient = true
+            }
+
+            override fun onExitAmbient() {
+                ambient = false
+            }
+
+            override fun onUpdateAmbient() {}
+        },
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lifecycle.addObserver(ambientObserver)
         setContent {
             MaterialTheme {
-                PadelApp(vm)
+                PadelApp(vm, ambient)
             }
         }
     }
@@ -86,7 +109,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PadelApp(vm: MatchViewModel) {
+fun PadelApp(vm: MatchViewModel, ambient: Boolean) {
     // Meldingen nodig voor een update die de telefoon start terwijl de app dicht is.
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(Unit) {
@@ -94,9 +117,13 @@ fun PadelApp(vm: MatchViewModel) {
             permission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
+    if (ambient && vm.screen != Screen.Match) {
+        AmbientText("Winner Padel")
+        return
+    }
     when (vm.screen) {
         Screen.Start -> StartScreen(vm)
-        Screen.Match -> MatchScreen(vm)
+        Screen.Match -> MatchScreen(vm, ambient)
         Screen.ConfirmStop -> ConfirmStopScreen(vm)
     }
 }
@@ -169,8 +196,8 @@ private fun StartScreen(vm: MatchViewModel) {
                 ToggleChip(
                     checked = vm.keepScreenOn,
                     onCheckedChange = { vm.updateKeepScreenOn(it) },
-                    label = { Text("Scherm aan") },
-                    secondaryLabel = { Text(if (vm.keepScreenOn) "Tijdens het spelen" else "Uit, spaart accu") },
+                    label = { Text("Scherm altijd aan") },
+                    secondaryLabel = { Text(if (vm.keepScreenOn) "Fel tijdens het spelen" else "Uit: dimt, tik om terug") },
                     toggleControl = { Switch(checked = vm.keepScreenOn) },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -196,7 +223,7 @@ private fun StartScreen(vm: MatchViewModel) {
 }
 
 @Composable
-private fun MatchScreen(vm: MatchViewModel) {
+private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
     val state = vm.state
     val haptics = LocalHapticFeedback.current
     val activity = LocalContext.current as? MainActivity
@@ -207,6 +234,11 @@ private fun MatchScreen(vm: MatchViewModel) {
         onDispose { activity?.keepScreenOn(false) }
     }
     BackHandler { vm.askStop() }
+
+    if (ambient) {
+        AmbientMatch(state)
+        return
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -332,3 +364,37 @@ private fun ConfirmStopScreen(vm: MatchViewModel) {
 }
 
 private fun teamName(team: Team): String = team.label
+
+/**
+ * Gedimde stand: zwart met grijze en witte tekst, geen vlakken en geen knoppen.
+ * Zuinig, en het scherm brandt niet in. Tik, knop of pols draaien maakt de app weer actief.
+ */
+@Composable
+private fun AmbientMatch(state: MatchState) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Text(
+            text = state.statusText ?: state.sets.joinToString("  ") { "${it.gamesA}-${it.gamesB}" },
+            fontSize = 13.sp,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 22.dp),
+        )
+        Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            for (team in Team.entries) {
+                val games = if (team == Team.A) state.gamesA else state.gamesB
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    val serving = state.winner == null && state.server == team
+                    Text(if (serving) "${teamName(team)} •" else teamName(team), fontSize = 12.sp, color = Color.Gray)
+                    Text(state.pointLabel(team), fontSize = 40.sp, color = Color.White)
+                    Text("Games $games", fontSize = 13.sp, color = Color.Gray)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AmbientText(text: String) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        Text(text, color = Color.Gray)
+    }
+}
