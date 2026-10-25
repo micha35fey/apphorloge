@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import nl.micha.padelscore.score.MatchSettings
 import nl.micha.padelscore.score.MatchState
 import nl.micha.padelscore.score.Team
+import nl.micha.padelscore.sync.ScoreSync
 import nl.micha.padelscore.update.UpdateInfo
 import nl.micha.padelscore.update.Updater
 
@@ -33,7 +34,7 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
     var keepScreenOn by mutableStateOf(prefs.getBoolean(KEY_KEEP_SCREEN_ON, true))
         private set
 
-    private val updater = Updater(app)
+    private val updater = Updater(app, tagPrefix = "v", assetName = "padelscore.apk", statusActivity = MainActivity::class.java)
 
     /** Nieuwere versie op GitHub, of null als de app actueel is (of er geen internet is). */
     var update by mutableStateOf<UpdateInfo?>(null)
@@ -112,6 +113,7 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
     fun stopMatch() {
         history.clear()
         prefs.edit().remove(KEY_STATE).remove(KEY_HISTORY).apply()
+        ScoreSync.send(getApplication(), state, active = false)
         screen = Screen.Start
     }
 
@@ -120,6 +122,7 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
             .putString(KEY_STATE, state.encode())
             .putString(KEY_HISTORY, history.joinToString("\n") { it.encode() })
             .apply()
+        ScoreSync.send(getApplication(), state, active = true)
     }
 
     private companion object {

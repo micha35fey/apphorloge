@@ -10,6 +10,18 @@ Scoreteller voor padel op een Android-horloge (Wear OS 3 of nieuwer).
 - Scherm aan (startscherm): houdt het scherm aan tijdens de partij. Uit spaart accu.
 - De stand wordt opgeslagen, dus als de app wordt afgesloten gaat er niets verloren.
 
+## Telefoon-app
+Op je telefoon zie je de stand live, via de gewone koppeling tussen horloge en telefoon.
+Zolang er een partij bezig is staat er ook een melding met de stand, en blijft het scherm
+van de telefoon aan als de app open staat.
+Download: `padelscore-telefoon.apk` bij de nieuwste release met "telefoon" in de naam op
+https://github.com/micha35fey/apphorloge/releases
+
+## Projectindeling
+- `app`: horloge-app (Wear OS)
+- `mobile`: telefoon-app
+- `core`: gedeelde code: scoretelling, updater, synchronisatie en icoon
+
 ## APK downloaden
 Elke push bouwt via GitHub Actions een APK en zet die als release neer.
 Nieuwste versie: https://github.com/micha35fey/apphorloge/releases/latest (bestand `padelscore.apk`).

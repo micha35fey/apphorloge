@@ -1,11 +1,7 @@
 package nl.micha.padelscore
 
-import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.content.pm.PackageInstaller
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
@@ -72,35 +68,16 @@ class MainActivity : ComponentActivity() {
     }
 
     fun startUpdate() {
-        // De eerste keer moet je toestaan dat deze app andere apps (zijn eigen update) installeert.
-        if (!packageManager.canRequestPackageInstalls()) {
-            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
-            try {
-                startActivity(intent)
-                vm.updateStatus = "Sta installeren toe en tik opnieuw"
-                return
-            } catch (e: ActivityNotFoundException) {
-                // Geen instellingenscherm op dit horloge: gewoon proberen, Android vraagt het dan zelf.
-            }
+        if (!Updater.ensureInstallAllowed(this)) {
+            vm.updateStatus = "Sta installeren toe en tik opnieuw"
+            return
         }
         vm.installUpdate()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.action != Updater.ACTION_INSTALL_STATUS) return
-        when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
-            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                @Suppress("DEPRECATION")
-                val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
-                if (confirm != null) startActivity(confirm)
-            }
-            PackageInstaller.STATUS_SUCCESS -> vm.updateStatus = "Geïnstalleerd"
-            else -> {
-                val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "code $status"
-                vm.updateStatus = "Mislukt: $message"
-            }
-        }
+        Updater.handleInstallStatus(this, intent)?.let { vm.updateStatus = it }
     }
 
     fun keepScreenOn(on: Boolean) {
@@ -248,12 +225,7 @@ private fun MatchScreen(vm: MatchViewModel) {
                     color = Color.White,
                 )
             }
-            val status = when {
-                state.winner != null -> "${teamName(state.winner)} wint!"
-                state.tiebreak -> "Tiebreak"
-                state.isGoldenPointMoment -> "Gouden punt"
-                else -> null
-            }
+            val status = state.statusText
             if (status != null) {
                 Text(text = status, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Yellow)
             }
@@ -340,4 +312,4 @@ private fun ConfirmStopScreen(vm: MatchViewModel) {
     }
 }
 
-private fun teamName(team: Team): String = if (team == Team.A) "Wij" else "Zij"
+private fun teamName(team: Team): String = team.label

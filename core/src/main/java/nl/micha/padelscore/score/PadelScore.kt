@@ -6,6 +6,8 @@ enum class Team {
     A, B;
 
     val other: Team get() = if (this == A) B else A
+
+    val label: String get() = if (this == A) "Wij" else "Zij"
 }
 
 data class MatchSettings(
@@ -43,6 +45,15 @@ data class MatchState(
 
     val isGoldenPointMoment: Boolean
         get() = !tiebreak && settings.goldenPoint && pointsA == 3 && pointsB == 3
+
+    /** Korte melding boven de stand: winnaar, tiebreak of gouden punt. */
+    val statusText: String?
+        get() = when {
+            winner != null -> "${winner.label} wint!"
+            tiebreak -> "Tiebreak"
+            isGoldenPointMoment -> "Gouden punt"
+            else -> null
+        }
 
     fun pointLabel(team: Team): String {
         val mine = if (team == Team.A) pointsA else pointsB

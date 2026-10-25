@@ -22,7 +22,7 @@ android {
     // Vaste sleutel, zodat een nieuwe versie over de oude heen geïnstalleerd kan worden.
     signingConfigs {
         create("padel") {
-            storeFile = file("padelscore.keystore")
+            storeFile = rootProject.file("padelscore.keystore")
             storePassword = "padelscore"
             keyAlias = "padelscore"
             keyPassword = "padelscore"
@@ -55,7 +55,5 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.wear.compose:compose-material:1.4.0")
     implementation("androidx.wear.compose:compose-foundation:1.4.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-
-    testImplementation("junit:junit:4.13.2")
+    implementation(project(":core"))
 }

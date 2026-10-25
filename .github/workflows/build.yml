@@ -23,11 +23,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: padelscore-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            mobile/build/outputs/apk/debug/mobile-debug.apk
       # Elke push wordt een release; de app op het horloge kijkt naar de nieuwste.
       - name: Release maken
         if: github.event_name == 'push'
-        run: cp app/build/outputs/apk/debug/app-debug.apk padelscore.apk
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk padelscore.apk
+          cp mobile/build/outputs/apk/debug/mobile-debug.apk padelscore-telefoon.apk
       - uses: softprops/action-gh-release@v2
         if: github.event_name == 'push'
         with:
@@ -36,3 +40,12 @@ jobs:
           target_commitish: ${{ github.sha }}
           files: padelscore.apk
           make_latest: true
+      # Telefoon-app als eigen release, zodat het horloge nooit de telefoon-APK pakt.
+      - uses: softprops/action-gh-release@v2
+        if: github.event_name == 'push'
+        with:
+          tag_name: telefoon-v1.${{ github.run_number }}
+          name: Winner Padel telefoon 1.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          files: padelscore-telefoon.apk
+          make_latest: false
