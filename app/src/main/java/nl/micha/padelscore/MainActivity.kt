@@ -172,6 +172,15 @@ private fun StartScreen(vm: MatchViewModel) {
                 }
             }
             item {
+                Chip(
+                    onClick = { vm.updateSettings(vm.settings.copy(startRight = !vm.settings.startRight)) },
+                    label = { Text("Wij staan") },
+                    secondaryLabel = { Text(if (vm.settings.startRight) "Rechts" else "Links") },
+                    colors = ChipDefaults.secondaryChipColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
                 ToggleChip(
                     checked = vm.settings.changeEnds,
                     onCheckedChange = { vm.updateSettings(vm.settings.copy(changeEnds = it)) },

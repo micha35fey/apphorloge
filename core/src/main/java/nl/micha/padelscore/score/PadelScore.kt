@@ -21,6 +21,8 @@ data class MatchSettings(
     val firstServer: Team = Team.A,
     /** Van kant wisselen na elke oneven game, en in de tiebreak na elke 6 punten. */
     val changeEnds: Boolean = false,
+    /** Wij beginnen rechts in beeld (standaard links). */
+    val startRight: Boolean = false,
 )
 
 data class SetScore(val gamesA: Int, val gamesB: Int)
@@ -62,8 +64,8 @@ data class MatchState(
             return (gameChanges + tiebreakChanges) % 2 == 1
         }
 
-    /** Het team dat links in beeld staat. */
-    val leftTeam: Team get() = if (endsSwapped) Team.B else Team.A
+    /** Het team dat links in beeld staat: de beginkant, en bij kant wisselen de andere. */
+    val leftTeam: Team get() = if (endsSwapped != settings.startRight) Team.B else Team.A
 
     val isGoldenPointMoment: Boolean
         get() = !tiebreak && settings.goldenPoint && pointsA == 3 && pointsB == 3
@@ -147,18 +149,20 @@ data class MatchState(
         gameServer.name,
         winner?.name ?: "",
         if (settings.changeEnds) 1 else 0,
+        if (settings.startRight) 1 else 0,
     ).joinToString(";")
 
     companion object {
         fun decode(text: String): MatchState? = runCatching {
             val f = text.split(";")
-            // 11 velden: opgeslagen door een versie van voor "kant wisselen".
-            require(f.size == 11 || f.size == 12)
+            // Minder velden: opgeslagen door een oudere versie, zonder kant wisselen of beginkant.
+            require(f.size in 11..13)
             val settings = MatchSettings(
                 goldenPoint = f[0] == "1",
                 setsToWin = f[1].toInt(),
                 firstServer = Team.valueOf(f[2]),
                 changeEnds = f.getOrNull(11) == "1",
+                startRight = f.getOrNull(12) == "1",
             )
             val sets = if (f[3].isEmpty()) emptyList() else f[3].split(",").map {
                 val (x, y) = it.split("-")

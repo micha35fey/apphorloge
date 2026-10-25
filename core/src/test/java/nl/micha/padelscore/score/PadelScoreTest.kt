@@ -147,5 +147,18 @@ class PadelScoreTest {
         // Opgeslagen door een oudere versie, zonder het veld voor kant wisselen.
         val old = "1;2;A;;1;0;0;0;0;B;"
         assertEquals(1, MatchState.decode(old)?.gamesA)
+        val right = MatchState(MatchSettings(startRight = true, changeEnds = true))
+        assertEquals(right, MatchState.decode(right.encode()))
+    }
+
+    @Test
+    fun startSideAndChangeEnds() {
+        var s = MatchState(MatchSettings(startRight = true, changeEnds = true))
+        assertEquals(Team.B, s.leftTeam)
+        s = s.games(Team.A, 1)
+        assertEquals(Team.A, s.leftTeam)
+        s = s.games(Team.A, 2)
+        assertEquals(Team.B, s.leftTeam)
+        assertEquals(Team.B, MatchState(MatchSettings(startRight = true)).games(Team.A, 1).leftTeam)
     }
 }

@@ -164,18 +164,6 @@ private fun PhoneApp(vm: PhoneViewModel) {
                     )
                 }
             }
-            Row(
-                modifier = Modifier.padding(top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    if (state.settings.setsToWin == 0) "Games" else "Sets",
-                    color = Color.Gray,
-                    fontSize = 20.sp,
-                )
-                Spacer(Modifier.width(16.dp))
-                Text(state.setsText(), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
-            }
         }
 
         // Knoppen alleen buiten een partij, dan heeft het scorebord alle ruimte.
