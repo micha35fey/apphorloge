@@ -16,7 +16,7 @@ import nl.micha.padelscore.update.UpdateEvents
 import nl.micha.padelscore.update.UpdateInfo
 import nl.micha.padelscore.update.Updater
 
-enum class Screen { Start, Match, ConfirmStop }
+enum class Screen { Start, Match, Menu, ConfirmStop }
 
 // Releases van de horloge-app op GitHub.
 const val UPDATE_TAG_PREFIX = "v"
@@ -108,12 +108,27 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
         save()
     }
 
+    fun openMenu() {
+        screen = Screen.Menu
+    }
+
+    fun closeMenu() {
+        screen = Screen.Match
+    }
+
+    /** Gouden punt aan of uit zetten tijdens de partij. */
+    fun setGoldenPoint(on: Boolean) {
+        settings = settings.copy(goldenPoint = on)
+        state = state.copy(settings = state.settings.copy(goldenPoint = on))
+        save()
+    }
+
     fun askStop() {
         screen = Screen.ConfirmStop
     }
 
     fun cancelStop() {
-        screen = Screen.Match
+        screen = Screen.Menu
     }
 
     fun stopMatch() {

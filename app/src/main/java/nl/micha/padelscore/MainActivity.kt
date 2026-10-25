@@ -124,6 +124,7 @@ fun PadelApp(vm: MatchViewModel, ambient: Boolean) {
     when (vm.screen) {
         Screen.Start -> StartScreen(vm)
         Screen.Match -> MatchScreen(vm, ambient)
+        Screen.Menu -> MenuScreen(vm)
         Screen.ConfirmStop -> ConfirmStopScreen(vm)
     }
 }
@@ -134,20 +135,7 @@ private fun StartScreen(vm: MatchViewModel) {
     Scaffold(timeText = { TimeText() }) {
         ScalingLazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             item { ListHeader { Text(stringResource(R.string.app_name)) } }
-            vm.update?.let { info ->
-                item {
-                    val activity = LocalContext.current as? MainActivity
-                    Chip(
-                        onClick = { activity?.startUpdate() },
-                        label = { Text("Update naar ${info.versionName}") },
-                        secondaryLabel = vm.updateStatus.let { status ->
-                            if (status != null) { { Text(status) } } else null
-                        },
-                        colors = ChipDefaults.gradientBackgroundChipColors(),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
+            if (vm.update != null) item { UpdateChip(vm) }
             item {
                 ToggleChip(
                     checked = vm.settings.goldenPoint,
@@ -233,7 +221,7 @@ private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
         activity?.keepScreenOn(vm.keepScreenOn && state.winner == null)
         onDispose { activity?.keepScreenOn(false) }
     }
-    BackHandler { vm.askStop() }
+    BackHandler { vm.openMenu() }
 
     if (ambient) {
         AmbientMatch(state)
@@ -282,25 +270,90 @@ private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
             }
         }
 
-        // Onderaan: ongedaan maken, of na afloop een nieuwe partij.
-        Row(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        // Geen knoppen tijdens het spelen; ongedaan maken en de rest zit in het menu (terugknop).
+        if (state.winner != null) {
             Button(
-                onClick = { vm.undo() },
-                enabled = vm.canUndo,
-                colors = ButtonDefaults.secondaryButtonColors(),
-                modifier = Modifier.size(ButtonDefaults.SmallButtonSize),
-            ) { Text("↶", fontSize = 18.sp) }
-            if (state.winner != null) {
-                Button(
-                    onClick = { vm.stopMatch() },
-                    modifier = Modifier.size(ButtonDefaults.SmallButtonSize),
-                ) { Text("✓", fontSize = 18.sp) }
+                onClick = { vm.stopMatch() },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 10.dp)
+                    .size(ButtonDefaults.SmallButtonSize),
+            ) { Text("✓", fontSize = 18.sp) }
+        }
+    }
+}
+
+@Composable
+private fun MenuScreen(vm: MatchViewModel) {
+    BackHandler { vm.closeMenu() }
+    val listState = rememberScalingLazyListState()
+    Scaffold(timeText = { TimeText() }) {
+        ScalingLazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            item { ListHeader { Text("Menu") } }
+            item {
+                Chip(
+                    onClick = { vm.closeMenu() },
+                    label = { Text("Verder spelen") },
+                    colors = ChipDefaults.primaryChipColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Chip(
+                    onClick = {
+                        vm.undo()
+                        vm.closeMenu()
+                    },
+                    enabled = vm.canUndo,
+                    label = { Text("Laatste punt terug") },
+                    colors = ChipDefaults.secondaryChipColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (vm.update != null) item { UpdateChip(vm) }
+            item {
+                ToggleChip(
+                    checked = vm.state.settings.goldenPoint,
+                    onCheckedChange = { vm.setGoldenPoint(it) },
+                    label = { Text("Gouden punt") },
+                    toggleControl = { Switch(checked = vm.state.settings.goldenPoint) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                ToggleChip(
+                    checked = vm.keepScreenOn,
+                    onCheckedChange = { vm.updateKeepScreenOn(it) },
+                    label = { Text("Scherm altijd aan") },
+                    toggleControl = { Switch(checked = vm.keepScreenOn) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Chip(
+                    onClick = { vm.askStop() },
+                    label = { Text("Partij stoppen") },
+                    colors = ChipDefaults.chipColors(backgroundColor = Color(0xFF8B1A1A)),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }
+}
+
+@Composable
+private fun UpdateChip(vm: MatchViewModel) {
+    val info = vm.update ?: return
+    val activity = LocalContext.current as? MainActivity
+    Chip(
+        onClick = { activity?.startUpdate() },
+        label = { Text("Update naar ${info.versionName}") },
+        secondaryLabel = vm.updateStatus.let { status ->
+            if (status != null) { { Text(status) } } else null
+        },
+        colors = ChipDefaults.gradientBackgroundChipColors(),
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -320,15 +373,15 @@ private fun TeamHalf(
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(teamName(team), fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+            Text(teamName(team), fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
             Text(
                 text = state.pointLabel(team),
-                fontSize = 44.sp,
+                fontSize = 56.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
             )
-            Text("Games $games", fontSize = 13.sp, color = Color.White)
+            Text("Games $games", fontSize = 16.sp, color = Color.White)
             Spacer(Modifier.height(4.dp))
             // Gele stip bij het team dat serveert.
             Box(
