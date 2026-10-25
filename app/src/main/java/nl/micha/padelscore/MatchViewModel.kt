@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import nl.micha.padelscore.score.DeuceRule
 import nl.micha.padelscore.score.MatchSettings
 import nl.micha.padelscore.score.MatchState
 import nl.micha.padelscore.score.Team
@@ -116,10 +117,10 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
         screen = Screen.Match
     }
 
-    /** Gouden punt aan of uit zetten tijdens de partij. */
-    fun setGoldenPoint(on: Boolean) {
-        settings = settings.copy(goldenPoint = on)
-        state = state.copy(settings = state.settings.copy(goldenPoint = on))
+    /** Regel bij 40-40 wijzigen tijdens de partij. */
+    fun setDeuceRule(rule: DeuceRule) {
+        settings = settings.copy(deuceRule = rule)
+        state = state.copy(settings = state.settings.copy(deuceRule = rule))
         save()
     }
 

@@ -19,19 +19,19 @@ class RefereeCallTest {
 
     @Test
     fun advantageAndDisadvantageForTheServer() {
-        var s = MatchState(MatchSettings(goldenPoint = false, firstServer = Team.A))
+        var s = MatchState(MatchSettings(deuceRule = DeuceRule.ADVANTAGE, firstServer = Team.A))
         repeat(3) { s = s.pointFor(Team.A).pointFor(Team.B) }
-        assertEquals("Veertig gelijk", RefereeCall.scoreCall(s))
+        assertEquals("Deuce", RefereeCall.scoreCall(s))
         assertEquals("Voordeel", call(s, Team.A))
         assertEquals("Nadeel", call(s, Team.B))
     }
 
     @Test
     fun goldenPoint() {
-        var s = MatchState(MatchSettings(goldenPoint = true))
+        var s = MatchState(MatchSettings(deuceRule = DeuceRule.GOLDEN))
         repeat(2) { s = s.pointFor(Team.A).pointFor(Team.B) }
         s = s.pointFor(Team.A)
-        assertEquals("Veertig gelijk. Gouden punt", call(s, Team.B))
+        assertEquals("Deuce. Gouden punt", call(s, Team.B))
     }
 
     @Test
@@ -133,10 +133,22 @@ class RefereeCallTest {
 
     @Test
     fun equalPointsAreCalledTwice() {
-        var s = MatchState(MatchSettings(goldenPoint = false))
+        var s = MatchState(MatchSettings(deuceRule = DeuceRule.ADVANTAGE))
         s = s.pointFor(Team.A).pointFor(Team.B).pointFor(Team.A)
         assertEquals("dertig, dertig", call(s, Team.B))
         val tiebreak = MatchState(gamesA = 6, gamesB = 6, tiebreak = true).pointFor(Team.A).pointFor(Team.B)
         assertEquals("twee, twee", call(tiebreak.pointFor(Team.A), Team.B))
+    }
+
+    @Test
+    fun starPointIsAnnounced() {
+        var s = MatchState(MatchSettings(deuceRule = DeuceRule.STAR))
+        repeat(2) { s = s.pointFor(Team.A).pointFor(Team.B) }
+        s = s.pointFor(Team.A)
+        assertEquals("Deuce", call(s, Team.B))
+        s = s.pointFor(Team.B).pointFor(Team.A)
+        assertEquals("Deuce", call(s, Team.B))
+        s = s.pointFor(Team.B).pointFor(Team.A)
+        assertEquals("Deuce. Star point", call(s, Team.B))
     }
 }

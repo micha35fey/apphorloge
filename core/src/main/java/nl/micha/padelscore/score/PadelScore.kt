@@ -10,9 +10,22 @@ enum class Team {
     val label: String get() = if (this == A) "Wij" else "Zij"
 }
 
+/** Wat er bij 40-40 (deuce) gebeurt. */
+enum class DeuceRule(val label: String) {
+    /** Doorspelen tot iemand twee punten voor staat. */
+    ADVANTAGE("Voordeel"),
+
+    /** Het volgende punt beslist de game. */
+    GOLDEN("Gouden punt"),
+
+    /** Eerst met voordeel; bij de derde deuce beslist het volgende punt (het star point). */
+    STAR("Star point");
+
+    val next: DeuceRule get() = entries[(ordinal + 1) % entries.size]
+}
+
 data class MatchSettings(
-    /** Gouden punt: bij 40-40 beslist het volgende punt de game. Uit = voordeel-regel. */
-    val goldenPoint: Boolean = true,
+    val deuceRule: DeuceRule = DeuceRule.GOLDEN,
     /**
      * Aantal sets nodig om te winnen: 1 (één set) of 2 (best of 3).
      * 0 = alleen games tellen: geen sets en geen tiebreak, het totaal loopt door tot je stopt.
@@ -38,6 +51,8 @@ data class MatchState(
     /** Team dat de huidige game (of de tiebreak) begint met serveren. */
     val gameServer: Team = settings.firstServer,
     val winner: Team? = null,
+    /** Hoe vaak deze game al op deuce (40-40) is gekomen; nodig voor het star point. */
+    val deuces: Int = 0,
 ) {
     val setsA: Int get() = sets.count { it.gamesA > it.gamesB }
     val setsB: Int get() = sets.count { it.gamesB > it.gamesA }
@@ -67,15 +82,20 @@ data class MatchState(
     /** Het team dat links in beeld staat: de beginkant, en bij kant wisselen de andere. */
     val leftTeam: Team get() = if (endsSwapped != settings.startRight) Team.B else Team.A
 
-    val isGoldenPointMoment: Boolean
-        get() = !tiebreak && settings.goldenPoint && pointsA == 3 && pointsB == 3
+    /** Bij deze 40-40 beslist het volgende punt: gouden punt, of star point bij de derde deuce. */
+    val isDecidingPoint: Boolean
+        get() = !tiebreak && pointsA == 3 && pointsB == 3 && when (settings.deuceRule) {
+            DeuceRule.ADVANTAGE -> false
+            DeuceRule.GOLDEN -> true
+            DeuceRule.STAR -> deuces >= 3
+        }
 
-    /** Korte melding boven de stand: winnaar, tiebreak of gouden punt. */
+    /** Korte melding boven de stand: winnaar, tiebreak, gouden punt of star point. */
     val statusText: String?
         get() = when {
             winner != null -> "${winner.label} wint!"
             tiebreak -> "Tiebreak"
-            isGoldenPointMoment -> "Gouden punt"
+            isDecidingPoint -> settings.deuceRule.label
             else -> null
         }
 
@@ -110,14 +130,15 @@ data class MatchState(
             return copy(pointsA = a, pointsB = b)
         }
 
-        val wonGame = mine >= 4 && (mine - theirs >= 2 || settings.goldenPoint)
+        val wonGame = mine >= 4 && (mine - theirs >= 2 || isDecidingPoint)
         if (wonGame) return winGame(team)
         // Terug van voordeel naar 40-40, zodat de getallen klein blijven.
         if (a == 4 && b == 4) {
             a = 3
             b = 3
         }
-        return copy(pointsA = a, pointsB = b)
+        val newDeuces = if (a == 3 && b == 3) deuces + 1 else deuces
+        return copy(pointsA = a, pointsB = b, deuces = newDeuces)
     }
 
     private fun winGame(team: Team): MatchState {
@@ -125,7 +146,7 @@ data class MatchState(
         val gb = gamesB + if (team == Team.B) 1 else 0
         // Na een tiebreak begint het team dat in de tiebreak als eerste ontving; dat is ook gewoon "de ander".
         val nextServer = gameServer.other
-        val base = copy(pointsA = 0, pointsB = 0, gameServer = nextServer)
+        val base = copy(pointsA = 0, pointsB = 0, gameServer = nextServer, deuces = 0)
         if (settings.setsToWin == 0) return base.copy(gamesA = ga, gamesB = gb)
 
         val setWon = tiebreak || ((ga >= 6 || gb >= 6) && kotlin.math.abs(ga - gb) >= 2)
@@ -140,7 +161,12 @@ data class MatchState(
 
     // Simpele tekstvorm om de stand op te slaan, zodat een herstart van de app niets kwijtraakt.
     fun encode(): String = listOf(
-        if (settings.goldenPoint) 1 else 0,
+        // 0 = voordeel, 1 = gouden punt (zoals in oudere versies), 2 = star point
+        when (settings.deuceRule) {
+            DeuceRule.ADVANTAGE -> 0
+            DeuceRule.GOLDEN -> 1
+            DeuceRule.STAR -> 2
+        },
         settings.setsToWin,
         settings.firstServer.name,
         sets.joinToString(",") { "${it.gamesA}-${it.gamesB}" },
@@ -150,15 +176,20 @@ data class MatchState(
         winner?.name ?: "",
         if (settings.changeEnds) 1 else 0,
         if (settings.startRight) 1 else 0,
+        deuces,
     ).joinToString(";")
 
     companion object {
         fun decode(text: String): MatchState? = runCatching {
             val f = text.split(";")
-            // Minder velden: opgeslagen door een oudere versie, zonder kant wisselen of beginkant.
-            require(f.size in 11..13)
+            // Minder velden: opgeslagen door een oudere versie, zonder kant wisselen, beginkant of deuces.
+            require(f.size in 11..14)
             val settings = MatchSettings(
-                goldenPoint = f[0] == "1",
+                deuceRule = when (f[0]) {
+                    "1" -> DeuceRule.GOLDEN
+                    "2" -> DeuceRule.STAR
+                    else -> DeuceRule.ADVANTAGE
+                },
                 setsToWin = f[1].toInt(),
                 firstServer = Team.valueOf(f[2]),
                 changeEnds = f.getOrNull(11) == "1",
@@ -178,6 +209,7 @@ data class MatchState(
                 tiebreak = f[8] == "1",
                 gameServer = Team.valueOf(f[9]),
                 winner = f[10].takeIf { it.isNotEmpty() }?.let { Team.valueOf(it) },
+                deuces = f.getOrNull(13)?.toIntOrNull() ?: 0,
             )
         }.getOrNull()
     }

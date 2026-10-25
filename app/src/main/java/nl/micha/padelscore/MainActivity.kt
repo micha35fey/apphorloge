@@ -137,12 +137,12 @@ private fun StartScreen(vm: MatchViewModel) {
             item { ListHeader { Text(stringResource(R.string.app_name)) } }
             if (vm.update != null) item { UpdateChip(vm) }
             item {
-                ToggleChip(
-                    checked = vm.settings.goldenPoint,
-                    onCheckedChange = { vm.updateSettings(vm.settings.copy(goldenPoint = it)) },
-                    label = { Text("Gouden punt") },
-                    secondaryLabel = { Text(if (vm.settings.goldenPoint) "Aan" else "Uit, met voordeel") },
-                    toggleControl = { Switch(checked = vm.settings.goldenPoint) },
+                // Bij 40-40: voordeel, gouden punt of star point. Tik om te wisselen.
+                Chip(
+                    onClick = { vm.updateSettings(vm.settings.copy(deuceRule = vm.settings.deuceRule.next)) },
+                    label = { Text("Bij 40-40") },
+                    secondaryLabel = { Text(vm.settings.deuceRule.label) },
+                    colors = ChipDefaults.secondaryChipColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -324,11 +324,11 @@ private fun MenuScreen(vm: MatchViewModel) {
             }
             if (vm.update != null) item { UpdateChip(vm) }
             item {
-                ToggleChip(
-                    checked = vm.state.settings.goldenPoint,
-                    onCheckedChange = { vm.setGoldenPoint(it) },
-                    label = { Text("Gouden punt") },
-                    toggleControl = { Switch(checked = vm.state.settings.goldenPoint) },
+                Chip(
+                    onClick = { vm.setDeuceRule(vm.state.settings.deuceRule.next) },
+                    label = { Text("Bij 40-40") },
+                    secondaryLabel = { Text(vm.state.settings.deuceRule.label) },
+                    colors = ChipDefaults.secondaryChipColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

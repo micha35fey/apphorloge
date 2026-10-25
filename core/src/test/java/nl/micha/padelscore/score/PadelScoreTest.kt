@@ -33,9 +33,9 @@ class PadelScoreTest {
 
     @Test
     fun goldenPointDecidesAtDeuce() {
-        var s = MatchState(MatchSettings(goldenPoint = true))
+        var s = MatchState(MatchSettings(deuceRule = DeuceRule.GOLDEN))
         s = s.points(Team.A, 3).points(Team.B, 3)
-        assertTrue(s.isGoldenPointMoment)
+        assertTrue(s.isDecidingPoint)
         s = s.pointFor(Team.B)
         assertEquals(0, s.gamesA)
         assertEquals(1, s.gamesB)
@@ -43,7 +43,7 @@ class PadelScoreTest {
 
     @Test
     fun advantageRuleNeedsTwoPoints() {
-        var s = MatchState(MatchSettings(goldenPoint = false))
+        var s = MatchState(MatchSettings(deuceRule = DeuceRule.ADVANTAGE))
         s = s.points(Team.A, 3).points(Team.B, 3)
         s = s.pointFor(Team.A)
         assertEquals("AD", s.pointLabel(Team.A))
@@ -138,7 +138,7 @@ class PadelScoreTest {
 
     @Test
     fun encodeDecodeRoundTrip() {
-        var s = MatchState(MatchSettings(goldenPoint = false, setsToWin = 2, firstServer = Team.B))
+        var s = MatchState(MatchSettings(deuceRule = DeuceRule.ADVANTAGE, setsToWin = 2, firstServer = Team.B))
         s = s.games(Team.A, 6).games(Team.B, 3).points(Team.A, 2)
         assertEquals(s, MatchState.decode(s.encode()))
         assertNull(MatchState.decode("rommel"))
@@ -160,5 +160,24 @@ class PadelScoreTest {
         s = s.games(Team.A, 2)
         assertEquals(Team.B, s.leftTeam)
         assertEquals(Team.B, MatchState(MatchSettings(startRight = true)).games(Team.A, 1).leftTeam)
+    }
+
+    @Test
+    fun starPointDecidesOnTheThirdDeuce() {
+        var s = MatchState(MatchSettings(deuceRule = DeuceRule.STAR))
+        repeat(3) { s = s.pointFor(Team.A).pointFor(Team.B) }
+        assertEquals(1, s.deuces)
+        assertTrue(!s.isDecidingPoint)
+        s = s.pointFor(Team.A).pointFor(Team.B)          // voordeel, tweede deuce
+        assertEquals(2, s.deuces)
+        assertTrue(!s.isDecidingPoint)
+        s = s.pointFor(Team.B).pointFor(Team.A)          // voordeel, derde deuce
+        assertEquals(3, s.deuces)
+        assertTrue(s.isDecidingPoint)
+        assertEquals("Star point", s.statusText)
+        s = s.pointFor(Team.B)
+        assertEquals(1, s.gamesB)
+        assertEquals(0, s.deuces)
+        assertEquals(s, MatchState.decode(s.encode()))
     }
 }
