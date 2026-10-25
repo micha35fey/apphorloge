@@ -60,13 +60,8 @@ object RefereeCall {
     fun scoreCall(state: MatchState): String {
         val serverPoints = if (state.server == Team.A) state.pointsA else state.pointsB
         val receiverPoints = if (state.server == Team.A) state.pointsB else state.pointsA
-        if (state.tiebreak) {
-            return if (serverPoints == receiverPoints) {
-                "${number(serverPoints)} gelijk"
-            } else {
-                "${number(serverPoints)}, ${number(receiverPoints)}"
-            }
-        }
+        // Gelijke punten worden dubbel genoemd ("dertig, dertig"); alleen 40-40 heet "veertig gelijk".
+        if (state.tiebreak) return "${number(serverPoints)}, ${number(receiverPoints)}"
         if (serverPoints >= 3 && receiverPoints >= 3) {
             return when {
                 serverPoints == receiverPoints && state.settings.goldenPoint -> "Veertig gelijk. Gouden punt"
@@ -75,7 +70,6 @@ object RefereeCall {
                 else -> "Nadeel"
             }
         }
-        if (serverPoints == receiverPoints) return "${pointWord(serverPoints)} gelijk"
         return "${pointWord(serverPoints)}, ${pointWord(receiverPoints)}"
     }
 

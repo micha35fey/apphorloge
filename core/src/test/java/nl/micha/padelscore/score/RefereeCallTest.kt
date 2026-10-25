@@ -14,7 +14,7 @@ class RefereeCallTest {
         assertEquals("nul, vijftien", call(start, Team.A))
         assertEquals("vijftien, nul", call(start, Team.B))
         val fifteenAll = start.pointFor(Team.A)
-        assertEquals("vijftien gelijk", call(fifteenAll, Team.B))
+        assertEquals("vijftien, vijftien", call(fifteenAll, Team.B))
     }
 
     @Test
@@ -126,8 +126,17 @@ class RefereeCallTest {
         assertEquals("Fijne wedstrijd\nMaak er een mooie pot van", RefereeCall.announce(null, MatchState()))
         // Terug naar 0-0 met "laatste punt terug" geeft gewoon de stand.
         val fifteen = MatchState().pointFor(Team.A)
-        assertEquals("nul gelijk", RefereeCall.announce(fifteen, MatchState()))
+        assertEquals("nul, nul", RefereeCall.announce(fifteen, MatchState()))
         // App opnieuw gestart midden in een partij: de stand, geen welkom.
         assertEquals("vijftien, nul", RefereeCall.announce(null, fifteen))
+    }
+
+    @Test
+    fun equalPointsAreCalledTwice() {
+        var s = MatchState(MatchSettings(goldenPoint = false))
+        s = s.pointFor(Team.A).pointFor(Team.B).pointFor(Team.A)
+        assertEquals("dertig, dertig", call(s, Team.B))
+        val tiebreak = MatchState(gamesA = 6, gamesB = 6, tiebreak = true).pointFor(Team.A).pointFor(Team.B)
+        assertEquals("twee, twee", call(tiebreak.pointFor(Team.A), Team.B))
     }
 }
