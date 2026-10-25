@@ -1,0 +1,7 @@
+<resources>
+    <!-- Swipe-to-dismiss uit, zodat je tijdens het spelen niet per ongeluk de app sluit. -->
+    <style name="Theme.PadelScore" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:windowSwipeToDismiss">false</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>
