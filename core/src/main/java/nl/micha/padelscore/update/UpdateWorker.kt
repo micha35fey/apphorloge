@@ -19,11 +19,13 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             applicationContext,
             tagPrefix = inputData.getString(KEY_TAG_PREFIX) ?: return Result.failure(),
             assetName = inputData.getString(KEY_ASSET) ?: return Result.failure(),
+            silent = true,
         )
         return try {
-            val info = updater.checkOrThrow(inputData.getInt(KEY_VERSION_CODE, 0))
+            val current = inputData.getInt(KEY_VERSION_CODE, 0)
+            val info = updater.checkOrThrow(current)
             if (info == null) {
-                UpdateMessages.report(applicationContext, "Al actueel")
+                UpdateMessages.report(applicationContext, "Al actueel (1.$current)")
             } else {
                 UpdateMessages.report(applicationContext, "Downloadt ${info.versionName}...")
                 updater.install(info, fromBackground = true)

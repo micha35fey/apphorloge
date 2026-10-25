@@ -31,6 +31,11 @@ class Updater(
     private val context: Context,
     private val tagPrefix: String,
     private val assetName: String,
+    /**
+     * Installeren zonder bevestiging proberen. Werkt op het horloge; op de telefoon weigert
+     * Play Protect zo'n installatie helemaal (INSTALL_FAILED_VERIFICATION_FAILURE), dus daar uit.
+     */
+    private val silent: Boolean,
 ) {
 
     /** Nieuwere versie, of null als de app actueel is of er geen verbinding is. */
@@ -68,7 +73,7 @@ class Updater(
     suspend fun install(info: UpdateInfo, fromBackground: Boolean = false) = withContext(Dispatchers.IO) {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (silent && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // Werkt alleen als deze app zelf de vorige versie installeerde; anders vraagt Android alsnog.
             params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
         }

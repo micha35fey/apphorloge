@@ -27,7 +27,7 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
     var score by mutableStateOf<SyncedScore?>(null)
         private set
 
-    private val updater = Updater(app, tagPrefix = "telefoon-v", assetName = "padelscore-telefoon.apk")
+    private val updater = Updater(app, tagPrefix = "telefoon-v", assetName = "padelscore-telefoon.apk", silent = false)
 
     var update by mutableStateOf<UpdateInfo?>(null)
         private set

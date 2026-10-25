@@ -39,7 +39,7 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
     var keepScreenOn by mutableStateOf(prefs.getBoolean(KEY_KEEP_SCREEN_ON, true))
         private set
 
-    private val updater = Updater(app, tagPrefix = UPDATE_TAG_PREFIX, assetName = UPDATE_ASSET)
+    private val updater = Updater(app, tagPrefix = UPDATE_TAG_PREFIX, assetName = UPDATE_ASSET, silent = true)
 
     /** Nieuwere versie op GitHub, of null als de app actueel is (of er geen internet is). */
     var update by mutableStateOf<UpdateInfo?>(null)

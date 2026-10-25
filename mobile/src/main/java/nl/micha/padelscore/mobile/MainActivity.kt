@@ -1,6 +1,8 @@
 package nl.micha.padelscore.mobile
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -29,6 +31,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -171,7 +174,16 @@ private fun PhoneApp(vm: PhoneViewModel) {
             vm.update?.let { info ->
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = { activity?.startUpdate() }) { Text("Update naar ${info.versionName}") }
-                vm.updateStatus?.let { Text(it, color = Color.Gray, fontSize = 14.sp) }
+                vm.updateStatus?.let { status ->
+                    Text(status, color = Color.Gray, fontSize = 14.sp, textAlign = TextAlign.Center)
+                    // Lukt installeren vanuit de app niet, dan via de browser downloaden.
+                    if (status.startsWith("Mislukt")) {
+                        val context = LocalContext.current
+                        TextButton(onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkUrl)))
+                        }) { Text("Download via browser") }
+                    }
+                }
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { vm.updateWatch() }) { Text("Horloge bijwerken") }
