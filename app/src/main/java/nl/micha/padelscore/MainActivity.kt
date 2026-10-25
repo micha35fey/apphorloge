@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -122,7 +123,7 @@ private fun StartScreen(vm: MatchViewModel) {
     val listState = rememberScalingLazyListState()
     Scaffold(timeText = { TimeText() }) {
         ScalingLazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-            item { ListHeader { Text("Padel score") } }
+            item { ListHeader { Text(stringResource(R.string.app_name)) } }
             vm.update?.let { info ->
                 item {
                     val activity = LocalContext.current as? MainActivity

@@ -32,7 +32,7 @@ jobs:
         if: github.event_name == 'push'
         with:
           tag_name: v1.${{ github.run_number }}
-          name: Padel score 1.${{ github.run_number }}
+          name: Winner Padel 1.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           files: padelscore.apk
           make_latest: true

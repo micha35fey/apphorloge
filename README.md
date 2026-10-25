@@ -1,4 +1,4 @@
-# Padel score (Wear OS)
+# Winner Padel (Wear OS)
 
 Scoreteller voor padel op een Android-horloge (Wear OS 3 of nieuwer).
 
