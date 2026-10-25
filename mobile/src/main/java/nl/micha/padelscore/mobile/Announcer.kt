@@ -18,7 +18,7 @@ object Announcer {
     private const val SAMPLE = "Dertig, vijftien\nGame\ndrie, één"
 
     // Nederlandse mannenstemmen van Spraakservices van Google, herkenbaar aan hun naam.
-    private val MALE_VOICE_HINTS = listOf("nl-nl-x-bmh", "nl-nl-x-dma", "nl-be-x-bec")
+    private val MALE_VOICE_HINTS = listOf("nl-nl-x-bmh", "nl-nl-x-dma")
 
     /** Lagere toon als er geen mannenstem is, zodat de stem zwaarder klinkt. */
     private const val DEEP_PITCH = 0.75f
@@ -57,8 +57,13 @@ object Announcer {
         val voices = dutchVoices()
         val index = voices.indexOfFirst { it.name == tts?.voice?.name }
         if (voices.isEmpty() || index < 0) return "Standaardstem, lager"
-        val male = if (voices[index].looksMale()) "man" else "lager"
-        return "Stem ${index + 1} van ${voices.size}, $male"
+        val voice = voices[index]
+        val details = listOfNotNull(
+            voice.shortName(),
+            if (voice.looksMale()) "man" else "lager",
+            if (voice.isNetworkConnectionRequired) "online" else null,
+        ).joinToString(", ")
+        return "Stem ${index + 1} van ${voices.size}: $details"
     }
 
     /** Volgende Nederlandse stem kiezen, onthouden en een voorbeeld laten horen. */
@@ -105,11 +110,20 @@ object Announcer {
         engine.setPitch(if (voice?.looksMale() == true) 1f else DEEP_PITCH)
     }
 
-    /** Nederlandse stemmen die zonder internet werken; als die er niet zijn, alle Nederlandse. */
+    /**
+     * Nederlandse stemmen uit Nederland (Belgische alleen als er geen andere zijn).
+     * Stemmen die zonder internet werken eerst, online stemmen achteraan.
+     */
     private fun dutchVoices(): List<Voice> {
-        val dutch = tts?.voices.orEmpty().filter { it.locale.language == "nl" }.sortedBy { it.name }
-        return dutch.filter { !it.isNetworkConnectionRequired }.ifEmpty { dutch }
+        val dutch = tts?.voices.orEmpty().filter { it.locale.language == "nl" }
+        val fromNetherlands = dutch.filter { it.locale.country.equals("NL", ignoreCase = true) }
+        return fromNetherlands.ifEmpty { dutch }
+            .sortedWith(compareBy<Voice> { it.isNetworkConnectionRequired }.thenBy { it.name })
     }
+
+    /** Herkenbaar stukje van de naam, bijvoorbeeld "bmh" uit "nl-nl-x-bmh-local". */
+    private fun Voice.shortName(): String =
+        name.substringAfter("-x-", name).substringBefore("-").take(12)
 
     private fun Voice.looksMale(): Boolean {
         val text = (name + " " + features.orEmpty().joinToString(" ")).lowercase()
