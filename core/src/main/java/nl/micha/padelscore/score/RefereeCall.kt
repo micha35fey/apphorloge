@@ -70,6 +70,8 @@ object RefereeCall {
                     else -> "Deuce"
                 }
                 serverPoints == receiverPoints && state.isDecidingPoint -> "Deuce. ${state.settings.deuceRule.label}"
+                // Voordeel: tellen hoe vaak het al deuce was.
+                serverPoints == receiverPoints && state.deuces >= 2 -> "Deuce ${number(state.deuces)}"
                 serverPoints == receiverPoints -> "Deuce"
                 serverPoints > receiverPoints -> "Voordeel"
                 else -> "Nadeel"

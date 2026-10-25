@@ -152,4 +152,16 @@ class RefereeCallTest {
         s = s.pointFor(Team.B).pointFor(Team.A)
         assertEquals("Star point", call(s, Team.B))
     }
+
+    @Test
+    fun deucesAreCountedWithAdvantage() {
+        var s = MatchState(MatchSettings(deuceRule = DeuceRule.ADVANTAGE))
+        repeat(3) { s = s.pointFor(Team.A).pointFor(Team.B) }
+        assertEquals("Deuce", RefereeCall.scoreCall(s))
+        s = s.pointFor(Team.A)
+        assertEquals("Deuce twee", call(s, Team.B))
+        s = s.pointFor(Team.B).pointFor(Team.B)
+        assertEquals("Deuce drie", call(s, Team.A))
+        assertEquals("Deuce 3", s.pointFor(Team.A).statusText)
+    }
 }
