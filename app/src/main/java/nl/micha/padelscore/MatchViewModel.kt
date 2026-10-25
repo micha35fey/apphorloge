@@ -29,6 +29,10 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
     var screen by mutableStateOf(Screen.Start)
         private set
 
+    /** Scherm aan houden tijdens een partij. Een app-voorkeur, dus los van de partij bewaard. */
+    var keepScreenOn by mutableStateOf(prefs.getBoolean(KEY_KEEP_SCREEN_ON, true))
+        private set
+
     private val updater = Updater(app)
 
     /** Nieuwere versie op GitHub, of null als de app actueel is (of er geen internet is). */
@@ -65,6 +69,11 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
             updateStatus = runCatching { updater.install(info) }
                 .fold(onSuccess = { "Installeren..." }, onFailure = { "Mislukt: ${it.message}" })
         }
+    }
+
+    fun updateKeepScreenOn(on: Boolean) {
+        keepScreenOn = on
+        prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON, on).apply()
     }
 
     fun updateSettings(newSettings: MatchSettings) {
@@ -116,6 +125,7 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val KEY_STATE = "state"
         const val KEY_HISTORY = "history"
+        const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         const val MAX_HISTORY = 200
     }
 }

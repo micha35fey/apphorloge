@@ -170,6 +170,16 @@ private fun StartScreen(vm: MatchViewModel) {
                 )
             }
             item {
+                ToggleChip(
+                    checked = vm.keepScreenOn,
+                    onCheckedChange = { vm.updateKeepScreenOn(it) },
+                    label = { Text("Scherm aan") },
+                    secondaryLabel = { Text(if (vm.keepScreenOn) "Tijdens het spelen" else "Uit, spaart accu") },
+                    toggleControl = { Switch(checked = vm.keepScreenOn) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
                 Chip(
                     onClick = { vm.startMatch() },
                     label = { Text("Start partij") },
@@ -196,8 +206,8 @@ private fun MatchScreen(vm: MatchViewModel) {
     val activity = LocalContext.current as? MainActivity
 
     // Scherm aan houden tijdens de partij, zodat je niet steeds terug moet naar de app.
-    DisposableEffect(state.winner) {
-        activity?.keepScreenOn(state.winner == null)
+    DisposableEffect(state.winner, vm.keepScreenOn) {
+        activity?.keepScreenOn(vm.keepScreenOn && state.winner == null)
         onDispose { activity?.keepScreenOn(false) }
     }
     BackHandler { vm.askStop() }
