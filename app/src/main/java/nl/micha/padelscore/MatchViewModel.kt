@@ -6,9 +6,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import nl.micha.padelscore.score.MatchSettings
 import nl.micha.padelscore.score.MatchState
 import nl.micha.padelscore.score.Team
+import nl.micha.padelscore.update.UpdateInfo
+import nl.micha.padelscore.update.Updater
 
 enum class Screen { Start, Match, ConfirmStop }
 
@@ -24,6 +28,15 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
 
     var screen by mutableStateOf(Screen.Start)
         private set
+
+    private val updater = Updater(app)
+
+    /** Nieuwere versie op GitHub, of null als de app actueel is (of er geen internet is). */
+    var update by mutableStateOf<UpdateInfo?>(null)
+        private set
+
+    /** Tekst over de voortgang van een update, voor op het startscherm. */
+    var updateStatus by mutableStateOf<String?>(null)
 
     // Eerdere standen voor "ongedaan maken"; het laatste element is de vorige stand.
     private val history = ArrayDeque<MatchState>()
@@ -41,6 +54,16 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
             state = saved
             settings = saved.settings
             screen = Screen.Match
+        }
+        viewModelScope.launch { update = updater.check(BuildConfig.VERSION_CODE) }
+    }
+
+    fun installUpdate() {
+        val info = update ?: return
+        updateStatus = "Downloaden..."
+        viewModelScope.launch {
+            updateStatus = runCatching { updater.install(info) }
+                .fold(onSuccess = { "Installeren..." }, onFailure = { "Mislukt: ${it.message}" })
         }
     }
 

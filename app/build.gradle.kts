@@ -4,6 +4,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Op GitHub Actions is het buildnummer de versie, zodat elke build hoger is dan de vorige.
+val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+
 android {
     namespace = "nl.micha.padelscore"
     compileSdk = 35
@@ -12,11 +15,24 @@ android {
         applicationId = "nl.micha.padelscore"
         minSdk = 30
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = buildNumber
+        versionName = "1.$buildNumber"
+    }
+
+    // Vaste sleutel, zodat een nieuwe versie over de oude heen geïnstalleerd kan worden.
+    signingConfigs {
+        create("padel") {
+            storeFile = file("padelscore.keystore")
+            storePassword = "padelscore"
+            keyAlias = "padelscore"
+            keyPassword = "padelscore"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("padel")
+        }
         release {
             isMinifyEnabled = false
         }
@@ -30,6 +46,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -38,6 +55,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.wear.compose:compose-material:1.4.0")
     implementation("androidx.wear.compose:compose-foundation:1.4.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     testImplementation("junit:junit:4.13.2")
 }

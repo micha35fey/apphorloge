@@ -1,8 +1,14 @@
 package nl.micha.padelscore
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.content.pm.PackageInstaller
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -32,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.Button
@@ -48,16 +53,51 @@ import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.ToggleChip
 import nl.micha.padelscore.score.MatchState
 import nl.micha.padelscore.score.Team
+import nl.micha.padelscore.update.Updater
 
 private val TeamAColor = Color(0xFF1565C0)
 private val TeamBColor = Color(0xFFC62828)
 
 class MainActivity : ComponentActivity() {
+    private val vm: MatchViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                PadelApp(viewModel())
+                PadelApp(vm)
+            }
+        }
+    }
+
+    fun startUpdate() {
+        // De eerste keer moet je toestaan dat deze app andere apps (zijn eigen update) installeert.
+        if (!packageManager.canRequestPackageInstalls()) {
+            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
+            try {
+                startActivity(intent)
+                vm.updateStatus = "Sta installeren toe en tik opnieuw"
+                return
+            } catch (e: ActivityNotFoundException) {
+                // Geen instellingenscherm op dit horloge: gewoon proberen, Android vraagt het dan zelf.
+            }
+        }
+        vm.installUpdate()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action != Updater.ACTION_INSTALL_STATUS) return
+        when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
+            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                @Suppress("DEPRECATION")
+                val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+                if (confirm != null) startActivity(confirm)
+            }
+            PackageInstaller.STATUS_SUCCESS -> vm.updateStatus = "Geïnstalleerd"
+            else -> {
+                val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "code $status"
+                vm.updateStatus = "Mislukt: $message"
             }
         }
     }
@@ -83,6 +123,20 @@ private fun StartScreen(vm: MatchViewModel) {
     Scaffold(timeText = { TimeText() }) {
         ScalingLazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             item { ListHeader { Text("Padel score") } }
+            vm.update?.let { info ->
+                item {
+                    val activity = LocalContext.current as? MainActivity
+                    Chip(
+                        onClick = { activity?.startUpdate() },
+                        label = { Text("Update naar ${info.versionName}") },
+                        secondaryLabel = vm.updateStatus.let { status ->
+                            if (status != null) { { Text(status) } } else null
+                        },
+                        colors = ChipDefaults.gradientBackgroundChipColors(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
             item {
                 ToggleChip(
                     checked = vm.settings.goldenPoint,
@@ -120,6 +174,14 @@ private fun StartScreen(vm: MatchViewModel) {
                     label = { Text("Start partij") },
                     colors = ChipDefaults.primaryChipColors(),
                     modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Text(
+                    text = "Versie ${BuildConfig.VERSION_NAME}",
+                    fontSize = 11.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 4.dp),
                 )
             }
         }

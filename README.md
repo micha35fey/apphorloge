@@ -10,8 +10,17 @@ Scoreteller voor padel op een Android-horloge (Wear OS 3 of nieuwer).
 - De stand wordt opgeslagen, dus als de app wordt afgesloten gaat er niets verloren.
 
 ## APK downloaden
-Elke push bouwt via GitHub Actions een APK. Ga naar tab **Actions**, open de laatste run
-en download het artifact `padelscore-apk`.
+Elke push bouwt via GitHub Actions een APK en zet die als release neer.
+Nieuwste versie: https://github.com/micha35fey/apphorloge/releases/latest (bestand `padelscore.apk`).
+
+## Updaten
+De app kijkt bij het opstarten op GitHub of er een nieuwere release is. Zo ja, dan staat er
+bovenaan het startscherm een knop "Update naar 1.x". De eerste keer vraagt het horloge of de
+app mag installeren; daarna bevestig je alleen nog de installatie.
+Dit werkt alleen als de repo openbaar is.
+
+Alle builds worden ondertekend met `app/padelscore.keystore`, zodat een nieuwe versie over de
+oude heen installeert. Niet weggooien: een andere sleutel betekent eerst de app verwijderen.
 
 ## Installeren op het horloge
 1. Horloge: Instellingen > Systeem > Info > tik 7x op Build-nummer.
