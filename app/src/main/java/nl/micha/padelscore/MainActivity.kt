@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -92,6 +93,11 @@ class MainActivity : ComponentActivity() {
                 PadelApp(vm, ambient)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        vm.onResume()
     }
 
     fun startUpdate() {
@@ -236,8 +242,17 @@ private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
     val activity = LocalContext.current as? MainActivity
 
     // Scherm aan houden tijdens de partij, zodat je niet steeds terug moet naar de app.
-    DisposableEffect(state.winner, vm.keepScreenOn) {
-        activity?.keepScreenOn(vm.keepScreenOn && state.winner == null)
+    // Tot 10 minuten na de laatste tik; daarna dimt het scherm toch, zodat een vergeten partij
+    // de accu niet leeg trekt. De volgende tik zet het weer aan.
+    val screenOn = vm.keepScreenOn && state.winner == null
+    LaunchedEffect(screenOn, vm.lastActivity) {
+        activity?.keepScreenOn(screenOn)
+        if (screenOn) {
+            delay(MatchViewModel.SCREEN_ON_MS)
+            activity?.keepScreenOn(false)
+        }
+    }
+    DisposableEffect(Unit) {
         onDispose { activity?.keepScreenOn(false) }
     }
     BackHandler { vm.openMenu() }

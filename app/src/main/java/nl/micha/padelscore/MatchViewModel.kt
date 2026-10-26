@@ -25,7 +25,7 @@ const val UPDATE_ASSET = "padelscore.apk"
 
 class MatchViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val prefs = app.getSharedPreferences("padel", Context.MODE_PRIVATE)
+    private val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     var settings by mutableStateOf(MatchSettings())
         private set
@@ -54,10 +54,19 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
 
     val canUndo: Boolean get() = history.isNotEmpty()
 
+    /** Moment van de laatste tik (punt of terug); het scherm-aan loopt 10 minuten vanaf hier. */
+    var lastActivity by mutableStateOf(System.currentTimeMillis())
+        private set
+
     init {
         // Een lopende partij terugzetten als de app is afgesloten door het systeem.
         val saved = prefs.getString(KEY_STATE, null)?.let { MatchState.decode(it) }
-        if (saved != null) {
+        val idle = System.currentTimeMillis() - prefs.getLong(KEY_LAST_ACTIVITY, System.currentTimeMillis())
+        if (saved != null && idle >= AUTO_STOP_MS) {
+            // Te lang niets gebeurd: de partij is vergeten te stoppen.
+            state = saved
+            stopMatch()
+        } else if (saved != null) {
             prefs.getString(KEY_HISTORY, null)
                 ?.split("\n")
                 ?.mapNotNull { MatchState.decode(it) }
@@ -93,6 +102,14 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
         state = MatchState(settings)
         screen = Screen.Match
         save()
+    }
+
+    /** Bij terugkomen in de app: kijken of de partij intussen automatisch is gestopt. */
+    fun onResume() {
+        if (screen != Screen.Start && prefs.getString(KEY_STATE, null) == null) {
+            history.clear()
+            screen = Screen.Start
+        }
     }
 
     fun point(team: Team) {
@@ -144,23 +161,35 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().remove(KEY_STATE).remove(KEY_HISTORY).apply()
         ScoreSync.send(getApplication(), state, active = false)
         MatchNotification.hide(getApplication())
+        AutoStopWorker.cancel(getApplication())
         screen = Screen.Start
     }
 
     private fun save() {
+        lastActivity = System.currentTimeMillis()
         prefs.edit()
             .putString(KEY_STATE, state.encode())
             .putString(KEY_HISTORY, history.joinToString("\n") { it.encode() })
+            .putLong(KEY_LAST_ACTIVITY, lastActivity)
             .apply()
+        AutoStopWorker.schedule(getApplication())
         ScoreSync.send(getApplication(), state, active = true)
         if (state.winner == null) MatchNotification.show(getApplication(), state)
         else MatchNotification.hide(getApplication())
     }
 
-    private companion object {
+    companion object {
+        const val PREFS = "padel"
         const val KEY_STATE = "state"
         const val KEY_HISTORY = "history"
-        const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
-        const val MAX_HISTORY = 200
+        const val KEY_LAST_ACTIVITY = "last_activity"
+        private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
+        private const val MAX_HISTORY = 200
+
+        /** Een partij zonder punt in 3 uur is vergeten te stoppen. */
+        const val AUTO_STOP_MS = 3 * 60 * 60 * 1000L
+
+        /** Scherm altijd aan geldt tot 10 minuten na de laatste tik. */
+        const val SCREEN_ON_MS = 10 * 60 * 1000L
     }
 }
