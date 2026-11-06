@@ -11,8 +11,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -257,6 +260,15 @@ private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
     }
     BackHandler { vm.openMenu() }
 
+    var undoFlash by remember { mutableStateOf(0) }
+    var showUndo by remember { mutableStateOf(false) }
+    LaunchedEffect(undoFlash) {
+        if (undoFlash == 0) return@LaunchedEffect
+        showUndo = true
+        delay(1200)
+        showUndo = false
+    }
+
     if (ambient) {
         AmbientMatch(state)
         return
@@ -275,8 +287,30 @@ private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         vm.point(team)
                     },
+                    // Lang drukken: laatste punt terug, voor als er per ongeluk getikt is.
+                    onLongClick = {
+                        if (vm.canUndo) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            vm.undo()
+                            undoFlash++
+                        }
+                    },
                 )
             }
+        }
+
+        // Even laten zien dat het laatste punt is teruggezet.
+        if (showUndo) {
+            Text(
+                text = "Punt terug",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .background(Color.Yellow, RoundedCornerShape(50))
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+            )
         }
 
         // Bovenaan: gespeelde sets en de status van de game.
@@ -392,6 +426,7 @@ private fun UpdateChip(vm: MatchViewModel) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TeamHalf(
     state: MatchState,
@@ -399,13 +434,18 @@ private fun TeamHalf(
     color: Color,
     modifier: Modifier,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     val games = if (team == Team.A) state.gamesA else state.gamesB
     Box(
         modifier = modifier
             .fillMaxHeight()
             .background(color.copy(alpha = if (state.winner == null || state.winner == team) 1f else 0.4f))
-            .clickable(enabled = state.winner == null, onClick = onClick),
+            // Tikken telt een punt (niet meer na de laatste bal); lang drukken kan altijd terug.
+            .combinedClickable(
+                onClick = { if (state.winner == null) onClick() },
+                onLongClick = onLongClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

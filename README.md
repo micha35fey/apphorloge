@@ -10,6 +10,7 @@ Scoreteller voor padel op een Android-horloge (Wear OS 3 of nieuwer).
   elke 6 punten. De vlakken schuiven dan mee (blauw blijft Wij), op horloge en telefoon, en de
   scheidsrechter roept "Kant wisselen". Uit = blijven staan.
 - Gele stip = dit team serveert. Bij 6-6 volgt een tiebreak tot 7 (2 verschil).
+- Tik op een vlak voor een punt, lang drukken zet het laatste punt terug.
 - Tijdens de partij is de stand full screen. De terugknop opent het menu: verder spelen,
   laatste punt terug, bijwerken, gouden punt, scherm altijd aan en partij stoppen.
 - Scherm altijd aan (startscherm): houdt het scherm fel aan tijdens de partij, tot 10 minuten na
