@@ -142,6 +142,14 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
 
     fun testAnnouncement() = Announcer.testAnnouncement(getApplication())
 
+    var chime by mutableStateOf(Announcer.isChimeEnabled(app))
+        private set
+
+    fun updateChime(on: Boolean) {
+        chime = on
+        Announcer.setChimeEnabled(getApplication(), on)
+    }
+
     fun nextVoice() {
         Announcer.nextVoice(getApplication())
         voiceLabel = Announcer.voiceLabel()

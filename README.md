@@ -47,6 +47,7 @@ onhoorbaar zacht geluid zodat de speaker niet in slaap valt en het begin van de 
 Mist de speaker toch het begin, zet dan "Speaker-vertraging" hoger (0,5 tot 3 seconden onhoorbaar
 zacht geluid
 vooraf); "Test omroep" laat meteen een voorbeeld horen.
+Met "Gong vooraf" klinkt er voor elke omroep een korte gong, zoals in een sporthal.
 
 Niet storen tijdens partij (telefoon): zet Niet storen aan zolang er op het horloge een partij
 bezig is. Meldingen zijn stil; telefoontjes, wekkers en de scheidsrechter komen door. Daarna

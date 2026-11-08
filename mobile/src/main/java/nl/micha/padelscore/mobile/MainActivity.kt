@@ -84,6 +84,12 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         vm.refreshDndAccess()
+        Announcer.setAppVisible(this, true)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        Announcer.setAppVisible(this, false)
     }
 
     fun startUpdate() {
@@ -218,6 +224,11 @@ private fun PhoneApp(vm: PhoneViewModel) {
                         Text("Speaker-vertraging: ${"%.1f".format(vm.leadMs / 1000.0).replace('.', ',')} s")
                     }
                     TextButton(onClick = { vm.testAnnouncement() }) { Text("Test omroep") }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Gong vooraf", color = Color.White, fontSize = 16.sp)
+                    Spacer(Modifier.width(12.dp))
+                    Switch(checked = vm.chime, onCheckedChange = { vm.updateChime(it) })
                 }
                 ApplauseButtons(vm)
             }

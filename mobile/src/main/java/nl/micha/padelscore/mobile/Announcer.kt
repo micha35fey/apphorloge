@@ -11,6 +11,7 @@ import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
+import nl.micha.padelscore.audio.Chime
 import nl.micha.padelscore.audio.WavJoin
 import nl.micha.padelscore.score.MatchState
 import nl.micha.padelscore.score.RefereeCall
@@ -32,6 +33,7 @@ object Announcer {
      * Per speaker verschillend, daarom in te stellen ("Speaker-vertraging").
      */
     private const val KEY_LEAD = "lead_ms"
+    private const val KEY_CHIME = "chime"
     private val LEAD_OPTIONS = listOf(500, 1000, 1500, 2000, 3000)
     private const val DEFAULT_LEAD = 1000
     private const val LAST_PART = "last"
@@ -63,6 +65,8 @@ object Announcer {
 
     /** Onhoorbaar zacht geluid tijdens de partij, zodat een Bluetooth-speaker niet in slaap valt. */
     private var keepAlive: MediaPlayer? = null
+    private var matchActive = false
+    private var appVisible = false
     private val main = Handler(Looper.getMainLooper())
 
     private val attributes = AudioAttributes.Builder()
@@ -94,7 +98,8 @@ object Announcer {
 
     fun onScore(context: Context, score: SyncedScore) {
         val appContext = context.applicationContext
-        main.post { if (score.active && isEnabled(appContext)) startKeepAlive(appContext) else stopKeepAlive() }
+        matchActive = score.active
+        main.post { updateKeepAlive(appContext) }
         if (!score.active) {
             last = null
             return
@@ -255,8 +260,8 @@ object Announcer {
     }
 
     /**
-     * Houdt de geluidsverbinding open met een geluid van ongeveer -85 dB (niet te horen, maar
-     * ook geen echte stilte, die sommige speakers als "uit" zien). Zonder dit valt een
+     * Houdt de geluidsverbinding open met een geluid van ongeveer -50 dB (buiten niet te horen,
+     * maar ook geen echte stilte, die speakers als "uit" zien). Zonder dit valt een
      * Bluetooth-speaker tussen de punten in slaap en mist hij het begin van de stand.
      */
     private fun startKeepAlive(context: Context) {
@@ -310,7 +315,9 @@ object Announcer {
         files.forEach { it.delete() }
         if (pcm.any { it == null }) return spokenText?.let { speakDirect(it) } ?: Unit
         val joined = File(context.cacheDir, "omroep.wav")
-        joined.writeBytes(WavJoin.join(pcm.filterNotNull(), leadMs(context), PAUSE_MS.toInt()))
+        val parts = pcm.filterNotNull()
+        val chime = if (isChimeEnabled(context)) Chime.pcm(parts.first().sampleRate, parts.first().channels) else null
+        joined.writeBytes(WavJoin.join(parts, leadMs(context), PAUSE_MS.toInt(), prefix = chime))
         stopVoice()
         audio?.requestAudioFocus(focus)
         voicePlayer = runCatching {
@@ -372,6 +379,28 @@ object Announcer {
         prefs(context).edit().putInt(KEY_LEAD, next).apply()
         testAnnouncement(context)
         return next
+    }
+
+    /** Gong vóór elke omroep, zoals in een sporthal. */
+    fun isChimeEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_CHIME, false)
+
+    fun setChimeEnabled(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(KEY_CHIME, on).apply()
+        testAnnouncement(context)
+    }
+
+    /**
+     * De app staat open (of niet). Ook dan de speaker wakker houden, zodat "Test omroep" laat
+     * horen hoe het tijdens een partij klinkt.
+     */
+    fun setAppVisible(context: Context, visible: Boolean) {
+        appVisible = visible
+        val appContext = context.applicationContext
+        main.post { updateKeepAlive(appContext) }
+    }
+
+    private fun updateKeepAlive(context: Context) {
+        if ((matchActive || appVisible) && isEnabled(context)) startKeepAlive(context) else stopKeepAlive()
     }
 
     /** Een voorbeeld-omroep, om stem en speaker-vertraging uit te proberen. */

@@ -33,4 +33,12 @@ class WavJoinTest {
     fun rejectsNonWav() {
         assertNull(WavJoin.read("geen wav".toByteArray()))
     }
+
+    @Test
+    fun chimeComesBeforeTheWords() {
+        val chime = Chime.pcm(rate, 1)
+        val joined = WavJoin.read(WavJoin.join(listOf(part(10)), leadMs = 0, pauseMs = 0, prefix = chime))!!
+        assertEquals(chime.data.size + rate / 1000 * 150 * 2 + 20, joined.data.size)
+        assertTrue(chime.data.size > rate)  // ruim een halve seconde
+    }
 }

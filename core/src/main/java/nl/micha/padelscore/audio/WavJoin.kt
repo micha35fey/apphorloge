@@ -44,13 +44,17 @@ object WavJoin {
     }
 
     /**
-     * Grootte van het "stille" geluid: ongeveer -75 dB, niet te horen. Echte digitale stilte
-     * (nullen) zien sommige Bluetooth-speakers als "geen geluid", en dan blijven ze slapen.
+     * Grootte van het "stille" geluid: ongeveer -50 dB, buiten niet te horen. Echte stilte (nullen)
+     * zien Bluetooth-speakers als "geen geluid" en dan blijven ze slapen; veel zachter dan dit
+     * wordt door de Bluetooth-compressie weggegooid en werkt dus ook niet.
      */
-    const val QUIET_LEVEL = 6
+    const val QUIET_LEVEL = 100
 
-    /** Eén WAV met [leadMs] bijna-stilte vooraf en [pauseMs] bijna-stilte tussen de stukken. */
-    fun join(parts: List<Pcm>, leadMs: Int, pauseMs: Int): ByteArray {
+    /**
+     * Eén WAV met [leadMs] bijna-stilte vooraf, dan eventueel [prefix] (een gong), en [pauseMs]
+     * bijna-stilte tussen de stukken.
+     */
+    fun join(parts: List<Pcm>, leadMs: Int, pauseMs: Int, prefix: Pcm? = null): ByteArray {
         require(parts.isNotEmpty())
         val first = parts.first()
         val bytesPerMs = first.sampleRate * first.channels * (first.bitsPerSample / 8) / 1000
@@ -68,6 +72,10 @@ object WavJoin {
         }
         val pcm = ByteArrayOutputStream()
         pcm.write(silence(leadMs))
+        if (prefix != null) {
+            pcm.write(prefix.data)
+            pcm.write(silence(150))
+        }
         parts.forEachIndexed { i, part ->
             if (i > 0) pcm.write(silence(pauseMs))
             pcm.write(part.data)
