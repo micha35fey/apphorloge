@@ -12,7 +12,11 @@ import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.MessageClient
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.launch
+import nl.micha.padelscore.score.MatchSettings
+import nl.micha.padelscore.score.decodeSettings
+import nl.micha.padelscore.score.encode
 import nl.micha.padelscore.sync.ScoreSync
+import nl.micha.padelscore.sync.SettingsSync
 import nl.micha.padelscore.sync.SyncedScore
 import nl.micha.padelscore.sync.UpdateMessages
 import nl.micha.padelscore.update.UpdateEvents
@@ -48,6 +52,14 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Of er een eigen applausgeluid gekozen is. */
     var customApplause by mutableStateOf(Announcer.customApplause(app) != null)
+        private set
+
+    private val prefs = app.getSharedPreferences("phone", android.content.Context.MODE_PRIVATE)
+
+    /** Instellingen die klaargezet worden voor de volgende partij op het horloge. */
+    var watchSettings by mutableStateOf(
+        prefs.getString(KEY_WATCH_SETTINGS, null)?.let { decodeSettings(it) } ?: MatchSettings(),
+    )
         private set
 
     /** Welke stem er spreekt, bijvoorbeeld "Stem 2 van 5". */
@@ -112,6 +124,13 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
 
     fun testApplause() = Announcer.testApplause(getApplication())
 
+    /** Bewaren en naar het horloge sturen; daar staan ze klaar bij de volgende Start partij. */
+    fun updateWatchSettings(settings: MatchSettings) {
+        watchSettings = settings
+        prefs.edit().putString(KEY_WATCH_SETTINGS, settings.encode()).apply()
+        SettingsSync.send(getApplication(), settings)
+    }
+
     fun nextVoice() {
         Announcer.nextVoice(getApplication())
         voiceLabel = Announcer.voiceLabel()
@@ -129,6 +148,10 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching { updater.install(info) }.onFailure { updateStatus = "Mislukt: ${it.message}" }
         }
+    }
+
+    private companion object {
+        const val KEY_WATCH_SETTINGS = "watch_settings"
     }
 
     override fun onCleared() {

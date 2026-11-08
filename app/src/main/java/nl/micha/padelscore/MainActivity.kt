@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -61,6 +62,8 @@ import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.ToggleChip
 import nl.micha.padelscore.score.MatchState
+import nl.micha.padelscore.score.formatDuration
+import nl.micha.padelscore.score.summary
 import nl.micha.padelscore.score.Team
 import nl.micha.padelscore.update.Updater
 
@@ -72,6 +75,7 @@ class MainActivity : ComponentActivity() {
 
     /** True als het scherm gedimd is (ambient mode). De app blijft dan voorop staan. */
     private var ambient by mutableStateOf(false)
+    private var ambientTick by mutableStateOf(0)
 
     private val ambientObserver = AmbientLifecycleObserver(
         this,
@@ -84,7 +88,10 @@ class MainActivity : ComponentActivity() {
                 ambient = false
             }
 
-            override fun onUpdateAmbient() {}
+            // Ongeveer elke minuut in de gedimde stand: de klok bijwerken.
+            override fun onUpdateAmbient() {
+                ambientTick++
+            }
         },
     )
 
@@ -93,7 +100,7 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(ambientObserver)
         setContent {
             MaterialTheme {
-                PadelApp(vm, ambient)
+                PadelApp(vm, ambient, ambientTick)
             }
         }
     }
@@ -118,7 +125,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun PadelApp(vm: MatchViewModel, ambient: Boolean) {
+fun PadelApp(vm: MatchViewModel, ambient: Boolean, ambientTick: Int) {
     // Meldingen nodig voor een update die de telefoon start terwijl de app dicht is.
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(Unit) {
@@ -132,7 +139,7 @@ fun PadelApp(vm: MatchViewModel, ambient: Boolean) {
     }
     when (vm.screen) {
         Screen.Start -> StartScreen(vm)
-        Screen.Match -> MatchScreen(vm, ambient)
+        Screen.Match -> MatchScreen(vm, ambient, ambientTick)
         Screen.Menu -> MenuScreen(vm)
         Screen.ConfirmStop -> ConfirmStopScreen(vm)
     }
@@ -144,6 +151,16 @@ private fun StartScreen(vm: MatchViewModel) {
     Scaffold(timeText = { TimeText() }) {
         ScalingLazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
             item { ListHeader { Text(stringResource(R.string.app_name)) } }
+            // Start bovenaan met de onthouden (of op de telefoon klaargezette) instellingen.
+            item {
+                Chip(
+                    onClick = { vm.startMatch() },
+                    label = { Text("Start partij") },
+                    secondaryLabel = { Text(vm.settings.summary()) },
+                    colors = ChipDefaults.primaryChipColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             if (vm.update != null) item { UpdateChip(vm) }
             item {
                 // Bij 40-40: voordeel, gouden punt of star point. Tik om te wisselen.
@@ -219,14 +236,6 @@ private fun StartScreen(vm: MatchViewModel) {
                 )
             }
             item {
-                Chip(
-                    onClick = { vm.startMatch() },
-                    label = { Text("Start partij") },
-                    colors = ChipDefaults.primaryChipColors(),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
                 Text(
                     text = "Versie ${BuildConfig.VERSION_NAME}",
                     fontSize = 11.sp,
@@ -239,7 +248,7 @@ private fun StartScreen(vm: MatchViewModel) {
 }
 
 @Composable
-private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
+private fun MatchScreen(vm: MatchViewModel, ambient: Boolean, ambientTick: Int) {
     val state = vm.state
     val haptics = LocalHapticFeedback.current
     val activity = LocalContext.current as? MainActivity
@@ -270,7 +279,7 @@ private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
     }
 
     if (ambient) {
-        AmbientMatch(state)
+        AmbientMatch(state, ambientTick)
         return
     }
 
@@ -329,6 +338,8 @@ private fun MatchScreen(vm: MatchViewModel, ambient: Boolean) {
             if (status != null) {
                 Text(text = status, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Yellow)
             }
+            val now = rememberNow(running = state.winner == null)
+            clockText(state, now)?.let { Text(it, fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f)) }
         }
 
         // Geen knoppen tijdens het spelen; ongedaan maken en de rest zit in het menu (terugknop).
@@ -494,6 +505,27 @@ private fun ConfirmStopScreen(vm: MatchViewModel) {
 
 private fun teamName(team: Team): String = team.label
 
+/** Huidige tijd, elke seconde bijgewerkt zolang [running]. */
+@Composable
+private fun rememberNow(running: Boolean): Long {
+    val now by produceState(System.currentTimeMillis(), running) {
+        while (running) {
+            value = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
+    return now
+}
+
+/** "Set 2 · 12:34" tijdens het spelen, "Tijd 1:02:05" na de laatste bal; null als de tijd onbekend is. */
+private fun clockText(state: MatchState, now: Long, minutesOnly: Boolean = false): String? {
+    if (state.setStartedAt <= 0) return null
+    fun format(ms: Long) = if (minutesOnly) "${ms / 60_000} min" else formatDuration(ms)
+    if (state.winner != null) return "Tijd ${format(state.totalElapsed(now))}"
+    val elapsed = format(state.setElapsed(now))
+    return if (state.settings.setsToWin == 0) "Tijd $elapsed" else "Set ${state.sets.size + 1} · $elapsed"
+}
+
 /** Games in de volgorde van het scherm: eerst het team dat links staat. */
 private fun MatchState.leftFirst(gamesA: Int, gamesB: Int): String =
     if (leftTeam == Team.A) "$gamesA-$gamesB" else "$gamesB-$gamesA"
@@ -503,8 +535,18 @@ private fun MatchState.leftFirst(gamesA: Int, gamesB: Int): String =
  * Zuinig, en het scherm brandt niet in. Tik, knop of pols draaien maakt de app weer actief.
  */
 @Composable
-private fun AmbientMatch(state: MatchState) {
+private fun AmbientMatch(state: MatchState, ambientTick: Int) {
+    // Gedimd alleen hele minuten; de tijd wordt bij elke ambient-update (ongeveer per minuut) opnieuw gelezen.
+    val minutes = remember(ambientTick, state) { clockText(state, System.currentTimeMillis(), minutesOnly = true) }
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        if (minutes != null) {
+            Text(
+                text = minutes,
+                fontSize = 12.sp,
+                color = Color.Gray,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp),
+            )
+        }
         Text(
             text = state.statusText ?: state.sets.joinToString("  ") { state.leftFirst(it.gamesA, it.gamesB) },
             fontSize = 13.sp,

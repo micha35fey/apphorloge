@@ -53,7 +53,28 @@ data class MatchState(
     val winner: Team? = null,
     /** Hoe vaak deze game al op deuce (40-40) is gekomen; nodig voor het star point. */
     val deuces: Int = 0,
+    /** Begin van de huidige set (tijd in ms sinds 1970), 0 = onbekend. */
+    val setStartedAt: Long = 0,
+    /** Duur van elke afgeronde set in ms. */
+    val setDurations: List<Long> = emptyList(),
 ) {
+    /** Hoe lang de huidige set al loopt. */
+    fun setElapsed(now: Long): Long = if (setStartedAt > 0) (now - setStartedAt).coerceAtLeast(0) else 0
+
+    /** Totale speeltijd: afgeronde sets plus de lopende set (die stopt bij de winnaar). */
+    fun totalElapsed(now: Long): Long = setDurations.sum() + if (winner == null) setElapsed(now) else 0
+
+    /**
+     * Na een punt: is er een set afgerond, dan de duur bewaren en de klok voor de volgende set starten.
+     * [previous] is de stand van voor het punt.
+     */
+    fun withSetTiming(previous: MatchState, now: Long): MatchState =
+        if (sets.size > previous.sets.size) {
+            copy(setDurations = previous.setDurations + previous.setElapsed(now), setStartedAt = now)
+        } else {
+            this
+        }
+
     val setsA: Int get() = sets.count { it.gamesA > it.gamesB }
     val setsB: Int get() = sets.count { it.gamesB > it.gamesA }
 
@@ -180,13 +201,15 @@ data class MatchState(
         if (settings.changeEnds) 1 else 0,
         if (settings.startRight) 1 else 0,
         deuces,
+        setStartedAt,
+        setDurations.joinToString(","),
     ).joinToString(";")
 
     companion object {
         fun decode(text: String): MatchState? = runCatching {
             val f = text.split(";")
             // Minder velden: opgeslagen door een oudere versie, zonder kant wisselen, beginkant of deuces.
-            require(f.size in 11..14)
+            require(f.size in 11..16)
             val settings = MatchSettings(
                 deuceRule = when (f[0]) {
                     "1" -> DeuceRule.GOLDEN
@@ -213,6 +236,8 @@ data class MatchState(
                 gameServer = Team.valueOf(f[9]),
                 winner = f[10].takeIf { it.isNotEmpty() }?.let { Team.valueOf(it) },
                 deuces = f.getOrNull(13)?.toIntOrNull() ?: 0,
+                setStartedAt = f.getOrNull(14)?.toLongOrNull() ?: 0,
+                setDurations = f.getOrNull(15)?.split(",")?.mapNotNull { it.toLongOrNull() } ?: emptyList(),
             )
         }.getOrNull()
     }

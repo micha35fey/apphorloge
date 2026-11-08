@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,6 +38,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +57,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import nl.micha.padelscore.score.MatchSettings
 import nl.micha.padelscore.score.MatchState
+import nl.micha.padelscore.score.formatDuration
+import nl.micha.padelscore.score.summary
+import kotlinx.coroutines.delay
 import nl.micha.padelscore.score.Team
 import nl.micha.padelscore.update.Updater
 
@@ -149,6 +159,19 @@ private fun PhoneApp(vm: PhoneViewModel) {
                         TeamPanel(state, team, color, score.active, Modifier.weight(1f))
                     }
                 }
+                val now = rememberNow(running = score.active && state.winner == null)
+                clockText(state, now)?.let { clock ->
+                    Text(
+                        text = clock,
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 8.dp)
+                            .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(50))
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
                 val status = if (score.active) state.statusText else "Geen partij bezig"
                 if (status != null) {
                     Text(
@@ -199,12 +222,79 @@ private fun PhoneApp(vm: PhoneViewModel) {
             if (vm.dnd && !vm.dndAccess) {
                 TextButton(onClick = { vm.updateDnd(true) }) { Text("Geef toegang tot Niet storen") }
             }
+            WatchSettingsButton(vm)
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { vm.updateWatch() }) { Text("Horloge bijwerken") }
             vm.watchUpdateStatus?.let { Text("Horloge: $it", color = Color.Gray, fontSize = 14.sp) }
             Text("Versie ${BuildConfig.VERSION_NAME}", color = Color.DarkGray, fontSize = 12.sp)
         }
     }
+}
+
+/** Huidige tijd, elke seconde bijgewerkt zolang [running]. */
+@Composable
+private fun rememberNow(running: Boolean): Long {
+    val now by produceState(System.currentTimeMillis(), running) {
+        while (running) {
+            value = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
+    return now
+}
+
+/** "Set 2 · 12:34" tijdens het spelen; na afloop de duur per set en het totaal. */
+private fun clockText(state: MatchState, now: Long): String? {
+    if (state.setStartedAt <= 0) return null
+    if (state.winner != null) {
+        val sets = state.setDurations.mapIndexed { i, ms -> "Set ${i + 1} ${formatDuration(ms)}" }
+        return (sets + "Totaal ${formatDuration(state.totalElapsed(now))}").joinToString(" · ")
+    }
+    val elapsed = formatDuration(state.setElapsed(now))
+    return if (state.settings.setsToWin == 0) "Tijd $elapsed" else "Set ${state.sets.size + 1} · $elapsed"
+}
+
+/**
+ * Instellingen voor de volgende partij op het horloge. Elke tik wisselt een keuze en stuurt
+ * het meteen door; op het horloge staat het dan klaar onder Start partij.
+ */
+@Composable
+private fun WatchSettingsButton(vm: PhoneViewModel) {
+    var open by remember { mutableStateOf(false) }
+    TextButton(onClick = { open = true }) { Text("Instellingen horloge (${vm.watchSettings.summary()})") }
+    if (!open) return
+    val s = vm.watchSettings
+    fun set(new: MatchSettings) = vm.updateWatchSettings(new)
+    AlertDialog(
+        onDismissRequest = { open = false },
+        confirmButton = { TextButton(onClick = { open = false }) { Text("Klaar") } },
+        title = { Text("Instellingen horloge") },
+        text = {
+            Column {
+                Text("Tik om te wisselen. Het horloge krijgt het meteen.", fontSize = 14.sp)
+                TextButton(onClick = { set(s.copy(deuceRule = s.deuceRule.next)) }) {
+                    Text("Bij 40-40: ${s.deuceRule.label}")
+                }
+                TextButton(onClick = { set(s.copy(setsToWin = if (s.setsToWin == 0) 2 else 0)) }) {
+                    Text("Spelvorm: ${if (s.setsToWin == 0) "Alleen games tellen" else "Sets spelen"}")
+                }
+                if (s.setsToWin != 0) {
+                    TextButton(onClick = { set(s.copy(setsToWin = if (s.setsToWin == 2) 1 else 2)) }) {
+                        Text("Aantal sets: ${if (s.setsToWin == 2) "Best of 3" else "1 set"}")
+                    }
+                }
+                TextButton(onClick = { set(s.copy(changeEnds = !s.changeEnds)) }) {
+                    Text("Kant wisselen: ${if (s.changeEnds) "Na oneven games" else "Blijven staan"}")
+                }
+                TextButton(onClick = { set(s.copy(startRight = !s.startRight)) }) {
+                    Text("Wij staan: ${if (s.startRight) "Rechts" else "Links"}")
+                }
+                TextButton(onClick = { set(s.copy(firstServer = s.firstServer.other)) }) {
+                    Text("Eerste opslag: ${s.firstServer.label}")
+                }
+            }
+        },
+    )
 }
 
 /** Applaus testen, en kiezen tussen het ingebouwde en een eigen geluid van de telefoon. */

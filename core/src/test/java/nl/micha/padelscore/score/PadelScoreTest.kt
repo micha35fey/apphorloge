@@ -180,4 +180,30 @@ class PadelScoreTest {
         assertEquals(0, s.deuces)
         assertEquals(s, MatchState.decode(s.encode()))
     }
+
+    @Test
+    fun setDurationsAreRecorded() {
+        var s = MatchState(setStartedAt = 1_000)
+        repeat(5 * 4 + 3) { s = s.pointFor(Team.A) }
+        val before = s
+        s = s.pointFor(Team.A).withSetTiming(before, now = 1_000 + 30 * 60_000)
+        assertEquals(listOf(30 * 60_000L), s.setDurations)
+        assertEquals(1_000L + 30 * 60_000, s.setStartedAt)
+        assertEquals(5 * 60_000L, s.setElapsed(s.setStartedAt + 5 * 60_000))
+        assertEquals(35 * 60_000L, s.totalElapsed(s.setStartedAt + 5 * 60_000))
+        assertEquals(s, MatchState.decode(s.encode()))
+        // Een gewoon punt laat de klok met rust.
+        val next = s.pointFor(Team.B)
+        assertEquals(next, next.withSetTiming(s, now = 99_999_999))
+    }
+
+    @Test
+    fun durationsAndSettingsText() {
+        assertEquals("0:05", formatDuration(5_000))
+        assertEquals("12:34", formatDuration((12 * 60 + 34) * 1000L))
+        assertEquals("1:02:05", formatDuration((3600 + 2 * 60 + 5) * 1000L))
+        val settings = MatchSettings(deuceRule = DeuceRule.STAR, setsToWin = 1, changeEnds = true, startRight = true)
+        assertEquals(settings, decodeSettings(settings.encode()))
+        assertEquals("Star point · 1 set", settings.summary())
+    }
 }

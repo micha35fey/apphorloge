@@ -20,7 +20,14 @@ Scoreteller voor padel op een Android-horloge (Wear OS 3 of nieuwer).
 - Een partij zonder punt in 3 uur stopt vanzelf, ook als de app dicht is.
 - De stand wordt opgeslagen, dus als de app wordt afgesloten gaat er niets verloren.
 
+- Het horloge onthoudt je instellingen; "Start partij" staat bovenaan met een samenvatting.
+- Klok: "Set 2 · 12:34" tijdens het spelen (gedimd per minuut), na afloop de totale speeltijd.
+
 ## Telefoon-app
+Met "Instellingen horloge" zet je op de telefoon de instellingen voor de volgende partij klaar;
+het horloge krijgt ze meteen (of zodra hij weer verbonden is). Op het scorebord loopt de setklok
+en na afloop zie je de duur per set en het totaal.
+
 Op je telefoon zie je de stand live, via de gewone koppeling tussen horloge en telefoon.
 Zolang er een partij bezig is staat er ook een melding met de stand, en blijft het scherm
 van de telefoon aan als de app open staat.

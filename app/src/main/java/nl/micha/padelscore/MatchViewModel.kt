@@ -12,6 +12,9 @@ import nl.micha.padelscore.score.DeuceRule
 import nl.micha.padelscore.score.MatchSettings
 import nl.micha.padelscore.score.MatchState
 import nl.micha.padelscore.score.Team
+import nl.micha.padelscore.score.decodeSettings
+import nl.micha.padelscore.score.encode
+import nl.micha.padelscore.sync.SettingsSync
 import nl.micha.padelscore.sync.ScoreSync
 import nl.micha.padelscore.update.UpdateEvents
 import nl.micha.padelscore.update.UpdateInfo
@@ -27,7 +30,8 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
 
     private val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    var settings by mutableStateOf(MatchSettings())
+    /** Instellingen voor de volgende partij; onthouden, en ook vanaf de telefoon klaar te zetten. */
+    var settings by mutableStateOf(prefs.getString(KEY_SETTINGS, null)?.let { decodeSettings(it) } ?: MatchSettings())
         private set
 
     var state by mutableStateOf(MatchState())
@@ -78,6 +82,8 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch { update = updater.check(BuildConfig.VERSION_CODE) }
         viewModelScope.launch { UpdateEvents.status.collect { if (it != null) updateStatus = it } }
+        // Instellingen van de telefoon meteen tonen als het startscherm open staat.
+        viewModelScope.launch { SettingsSync.incoming.collect { if (it != null) settings = it } }
     }
 
     fun installUpdate() {
@@ -95,11 +101,12 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateSettings(newSettings: MatchSettings) {
         settings = newSettings
+        prefs.edit().putString(KEY_SETTINGS, newSettings.encode()).apply()
     }
 
     fun startMatch() {
         history.clear()
-        state = MatchState(settings)
+        state = MatchState(settings, setStartedAt = System.currentTimeMillis())
         screen = Screen.Match
         save()
     }
@@ -116,7 +123,8 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
         if (state.winner != null) return
         history.addLast(state)
         while (history.size > MAX_HISTORY) history.removeFirst()
-        state = state.pointFor(team)
+        val before = state
+        state = state.pointFor(team).withSetTiming(before, System.currentTimeMillis())
         save()
     }
 
@@ -136,14 +144,14 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Regel bij 40-40 wijzigen tijdens de partij. */
     fun setDeuceRule(rule: DeuceRule) {
-        settings = settings.copy(deuceRule = rule)
+        updateSettings(settings.copy(deuceRule = rule))
         state = state.copy(settings = state.settings.copy(deuceRule = rule))
         save()
     }
 
     /** Kant wisselen aan of uit zetten tijdens de partij. */
     fun setChangeEnds(on: Boolean) {
-        settings = settings.copy(changeEnds = on)
+        updateSettings(settings.copy(changeEnds = on))
         state = state.copy(settings = state.settings.copy(changeEnds = on))
         save()
     }
@@ -183,6 +191,7 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
         const val KEY_STATE = "state"
         const val KEY_HISTORY = "history"
         const val KEY_LAST_ACTIVITY = "last_activity"
+        const val KEY_SETTINGS = "settings"
         private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         private const val MAX_HISTORY = 200
 
