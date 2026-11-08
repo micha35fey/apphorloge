@@ -11,9 +11,11 @@ import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
+import nl.micha.padelscore.audio.WavJoin
 import nl.micha.padelscore.score.MatchState
 import nl.micha.padelscore.score.RefereeCall
 import nl.micha.padelscore.sync.SyncedScore
+import java.io.File
 import java.util.Locale
 
 /** Roept de stand om als een scheidsrechter, met de spraak van de telefoon. */
@@ -47,6 +49,12 @@ object Announcer {
     /** Na de omroep van het einde van de partij volgt applaus. */
     private var applauseNext = false
     private var player: MediaPlayer? = null
+
+    /** Speelt de samengevoegde omroep af. */
+    private var voicePlayer: MediaPlayer? = null
+    private var batch = 0
+    private var spokenText: String? = null
+    private const val SYNTH = "synth:"
 
     /** Onhoorbaar zacht geluid tijdens de partij, zodat een Bluetooth-speaker niet in slaap valt. */
     private var keepAlive: MediaPlayer? = null
@@ -144,18 +152,24 @@ object Announcer {
             override fun onStart(utteranceId: String?) {}
 
             override fun onDone(utteranceId: String?) {
-                if (utteranceId != LAST_PART) return
-                if (applauseNext) {
-                    applauseNext = false
-                    main.post { playApplause() }
-                } else {
-                    audio?.abandonAudioFocusRequest(focus)
+                when {
+                    // Laatste stuk van een omroep is als bestand klaar: samenvoegen en afspelen.
+                    utteranceId?.startsWith(SYNTH) == true -> {
+                        val (id, index, count) = utteranceId!!.removePrefix(SYNTH).split(":").map { it.toInt() }
+                        if (index == count - 1) main.post { playJoined(id, count) }
+                    }
+                    utteranceId == LAST_PART -> main.post { finishedSpeaking() }
                 }
             }
 
             @Deprecated("Vereist door de interface")
             override fun onError(utteranceId: String?) {
-                audio?.abandonAudioFocusRequest(focus)
+                if (utteranceId?.startsWith(SYNTH) == true) {
+                    // Opnemen lukt niet: dan toch direct uitspreken.
+                    main.post { spokenText?.let { speakDirect(it) } }
+                } else {
+                    audio?.abandonAudioFocusRequest(focus)
+                }
             }
         })
         val voices = dutchVoices()
@@ -260,10 +274,77 @@ object Announcer {
         player = null
     }
 
+    /**
+     * Spreekt [text] uit. Elk stuk wordt eerst naar een WAV-bestand opgenomen; die worden met de
+     * stilte vooraf en de pauzes tot één bestand samengevoegd en in één keer afgespeeld. Zo start
+     * de geluidsstroom naar een Bluetooth-speaker maar één keer en valt er niets weg.
+     */
     private fun say(text: String) {
         val engine = tts ?: return
-        // Een nieuwe partij of stand onderbreekt het applaus.
-        main.post { stopApplause() }
+        val context = appContext ?: return speakDirect(text)
+        // Een nieuwe stand onderbreekt de vorige omroep en het applaus.
+        main.post {
+            stopApplause()
+            stopVoice()
+        }
+        engine.stop()
+        spokenText = text
+        val id = ++batch
+        val parts = text.split(RefereeCall.PAUSE)
+        parts.forEachIndexed { i, part ->
+            val result = engine.synthesizeToFile(part, null, partFile(context, id, i), "$SYNTH$id:$i:${parts.size}")
+            if (result != TextToSpeech.SUCCESS) return speakDirect(text)
+        }
+    }
+
+    private fun playJoined(id: Int, count: Int) {
+        val context = appContext ?: return
+        if (id != batch) return  // er is intussen alweer een nieuwere stand
+        val files = (0 until count).map { partFile(context, id, it) }
+        val pcm = files.map { runCatching { WavJoin.read(it.readBytes()) }.getOrNull() }
+        files.forEach { it.delete() }
+        if (pcm.any { it == null }) return spokenText?.let { speakDirect(it) } ?: Unit
+        val joined = File(context.cacheDir, "omroep.wav")
+        joined.writeBytes(WavJoin.join(pcm.filterNotNull(), WAKE_MS.toInt(), PAUSE_MS.toInt()))
+        stopVoice()
+        audio?.requestAudioFocus(focus)
+        voicePlayer = runCatching {
+            MediaPlayer().apply {
+                setAudioAttributes(attributes)
+                setDataSource(joined.path)
+                prepare()
+                setOnCompletionListener {
+                    stopVoice()
+                    finishedSpeaking()
+                }
+                start()
+            }
+        }.getOrElse {
+            spokenText?.let { text -> speakDirect(text) }
+            null
+        }
+    }
+
+    private fun stopVoice() {
+        voicePlayer?.release()
+        voicePlayer = null
+    }
+
+    private fun partFile(context: Context, id: Int, index: Int) = File(context.cacheDir, "omroep_${id}_$index.wav")
+
+    /** Na de omroep: applaus als de partij net is afgelopen, anders muziek weer op volume. */
+    private fun finishedSpeaking() {
+        if (applauseNext) {
+            applauseNext = false
+            playApplause()
+        } else {
+            audio?.abandonAudioFocusRequest(focus)
+        }
+    }
+
+    /** Reserve: rechtstreeks uitspreken, in stukken met pauzes ertussen. */
+    private fun speakDirect(text: String) {
+        val engine = tts ?: return
         audio?.requestAudioFocus(focus)
         engine.playSilentUtterance(WAKE_MS, TextToSpeech.QUEUE_FLUSH, "wake")
         val parts = text.split(RefereeCall.PAUSE)
