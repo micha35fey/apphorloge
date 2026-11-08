@@ -2,6 +2,7 @@ package nl.micha.padelscore.audio
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WavJoinTest {
@@ -19,7 +20,12 @@ class WavJoinTest {
         // 10 ms stilte + 100 samples + 20 ms stilte + 50 samples, 2 bytes per sample
         val expected = (rate / 1000 * 10 + 100 + rate / 1000 * 20 + 50) * 2
         assertEquals(expected, pcm.data.size)
-        assertEquals(0.toByte(), pcm.data[0])
+        // Vooraf geen echte stilte maar onhoorbaar zachte ruis.
+        val lead = (0 until rate / 1000 * 10).map { i ->
+            ((pcm.data[2 * i + 1].toInt() shl 8) or (pcm.data[2 * i].toInt() and 0xFF)).toShort().toInt()
+        }
+        assertTrue(lead.all { kotlin.math.abs(it) <= WavJoin.QUIET_LEVEL })
+        assertTrue(lead.any { it != 0 })
         assertEquals(7.toByte(), pcm.data[rate / 1000 * 10 * 2])
     }
 

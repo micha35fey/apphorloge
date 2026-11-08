@@ -44,7 +44,8 @@ Met "Stem wisselen" kies je een andere Nederlandse stem, met een voorbeeld.
 Aan of uit met de schakelaar onderaan het telefoonscherm. Gebruikt het media-volume, dus ook via een
 Bluetooth-speaker; muziek gaat even zachter tijdens de omroep. Tijdens de partij speelt een
 onhoorbaar zacht geluid zodat de speaker niet in slaap valt en het begin van de stand niet mist.
-Mist de speaker toch het begin, zet dan "Speaker-vertraging" hoger (0,5 tot 3 seconden stilte
+Mist de speaker toch het begin, zet dan "Speaker-vertraging" hoger (0,5 tot 3 seconden onhoorbaar
+zacht geluid
 vooraf); "Test omroep" laat meteen een voorbeeld horen.
 
 Niet storen tijdens partij (telefoon): zet Niet storen aan zolang er op het horloge een partij

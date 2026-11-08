@@ -43,12 +43,29 @@ object WavJoin {
         return null
     }
 
-    /** Eén WAV met [leadMs] stilte vooraf en [pauseMs] stilte tussen de stukken. */
+    /**
+     * Grootte van het "stille" geluid: ongeveer -75 dB, niet te horen. Echte digitale stilte
+     * (nullen) zien sommige Bluetooth-speakers als "geen geluid", en dan blijven ze slapen.
+     */
+    const val QUIET_LEVEL = 6
+
+    /** Eén WAV met [leadMs] bijna-stilte vooraf en [pauseMs] bijna-stilte tussen de stukken. */
     fun join(parts: List<Pcm>, leadMs: Int, pauseMs: Int): ByteArray {
         require(parts.isNotEmpty())
         val first = parts.first()
         val bytesPerMs = first.sampleRate * first.channels * (first.bitsPerSample / 8) / 1000
-        fun silence(ms: Int) = ByteArray(bytesPerMs * ms)
+        val random = java.util.Random(1)
+        fun silence(ms: Int): ByteArray {
+            val bytes = ByteArray(bytesPerMs * ms)
+            if (first.bitsPerSample != 16) return bytes
+            // Zachte ruis in plaats van nullen, 16-bit little-endian.
+            for (i in 0 until bytes.size / 2) {
+                val sample = random.nextInt(2 * QUIET_LEVEL + 1) - QUIET_LEVEL
+                bytes[2 * i] = (sample and 0xFF).toByte()
+                bytes[2 * i + 1] = (sample shr 8).toByte()
+            }
+            return bytes
+        }
         val pcm = ByteArrayOutputStream()
         pcm.write(silence(leadMs))
         parts.forEachIndexed { i, part ->
