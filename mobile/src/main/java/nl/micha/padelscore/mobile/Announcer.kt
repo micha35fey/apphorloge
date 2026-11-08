@@ -26,7 +26,7 @@ object Announcer {
     private const val PAUSE_MS = 700L
 
     /** Stilte vooraf, zodat een Bluetooth-speaker uit zijn slaapstand komt en het begin niet mist. */
-    private const val WAKE_MS = 400L
+    private const val WAKE_MS = 900L
     private const val LAST_PART = "last"
     private const val SAMPLE = "Dertig, vijftien\nGame\ndrie, één"
 
@@ -47,6 +47,9 @@ object Announcer {
     /** Na de omroep van het einde van de partij volgt applaus. */
     private var applauseNext = false
     private var player: MediaPlayer? = null
+
+    /** Onhoorbaar zacht geluid tijdens de partij, zodat een Bluetooth-speaker niet in slaap valt. */
+    private var keepAlive: MediaPlayer? = null
     private val main = Handler(Looper.getMainLooper())
 
     private val attributes = AudioAttributes.Builder()
@@ -64,7 +67,10 @@ object Announcer {
 
     fun setEnabled(context: Context, on: Boolean) {
         prefs(context).edit().putBoolean(KEY_ENABLED, on).apply()
-        if (!on) tts?.stop()
+        if (!on) {
+            tts?.stop()
+            main.post { stopKeepAlive() }
+        }
     }
 
     /** Start de spraak alvast, zodat de stemmenlijst klaar is. [ready] wordt aangeroepen als dat zo is. */
@@ -74,6 +80,8 @@ object Announcer {
     }
 
     fun onScore(context: Context, score: SyncedScore) {
+        val appContext = context.applicationContext
+        main.post { if (score.active && isEnabled(appContext)) startKeepAlive(appContext) else stopKeepAlive() }
         if (!score.active) {
             last = null
             return
@@ -225,6 +233,25 @@ object Announcer {
             start()
         }
         main.postDelayed({ if (player != null) done() }, APPLAUSE_MS + 500)
+    }
+
+    /**
+     * Houdt de geluidsverbinding open met een geluid van ongeveer -85 dB (niet te horen, maar
+     * ook geen echte stilte, die sommige speakers als "uit" zien). Zonder dit valt een
+     * Bluetooth-speaker tussen de punten in slaap en mist hij het begin van de stand.
+     */
+    private fun startKeepAlive(context: Context) {
+        if (keepAlive != null) return
+        val session = context.getSystemService(AudioManager::class.java)?.generateAudioSessionId() ?: return
+        keepAlive = MediaPlayer.create(context, R.raw.keepalive, attributes, session)?.apply {
+            isLooping = true
+            start()
+        }
+    }
+
+    private fun stopKeepAlive() {
+        keepAlive?.release()
+        keepAlive = null
     }
 
     private fun stopApplause() {

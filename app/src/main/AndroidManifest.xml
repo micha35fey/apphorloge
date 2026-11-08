@@ -37,6 +37,19 @@
             </intent-filter>
         </service>
 
+        <!-- Update die de telefoon heeft gedownload en doorstuurt. -->
+        <service
+            android:name=".ApkReceiverService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/apk"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+
         <!-- Update-verzoek van de telefoon. -->
         <service
             android:name=".UpdateRequestService"

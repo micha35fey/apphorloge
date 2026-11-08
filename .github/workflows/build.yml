@@ -18,20 +18,20 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Tests en debug-APK bouwen
-        run: ./gradlew testDebugUnitTest assembleDebug
+      - name: Tests en geoptimaliseerde APK bouwen
+        run: ./gradlew testDebugUnitTest assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: padelscore-apk
           path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            mobile/build/outputs/apk/debug/mobile-debug.apk
+            app/build/outputs/apk/release/app-release.apk
+            mobile/build/outputs/apk/release/mobile-release.apk
       # Elke push wordt een release; de app op het horloge kijkt naar de nieuwste.
       - name: Release maken
         if: github.event_name == 'push'
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk padelscore.apk
-          cp mobile/build/outputs/apk/debug/mobile-debug.apk padelscore-telefoon.apk
+          cp app/build/outputs/apk/release/app-release.apk padelscore.apk
+          cp mobile/build/outputs/apk/release/mobile-release.apk padelscore-telefoon.apk
       - uses: softprops/action-gh-release@v2
         if: github.event_name == 'push'
         with:

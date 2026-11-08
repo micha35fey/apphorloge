@@ -15,6 +15,18 @@ import nl.micha.padelscore.sync.UpdateMessages
 class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        // APK die de telefoon al heeft gestuurd: alleen nog installeren.
+        inputData.getString(KEY_FILE)?.let { path ->
+            return try {
+                UpdateMessages.report(applicationContext, "Installeren...")
+                Updater(applicationContext, tagPrefix = "", assetName = "", silent = true)
+                    .installFile(java.io.File(path), fromBackground = true)
+                Result.success()
+            } catch (e: Exception) {
+                UpdateMessages.report(applicationContext, "Mislukt: ${e.message}")
+                Result.failure()
+            }
+        }
         val updater = Updater(
             applicationContext,
             tagPrefix = inputData.getString(KEY_TAG_PREFIX) ?: return Result.failure(),
@@ -41,6 +53,15 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         private const val KEY_TAG_PREFIX = "tag_prefix"
         private const val KEY_ASSET = "asset"
         private const val KEY_VERSION_CODE = "version_code"
+        private const val KEY_FILE = "file"
+
+        /** Een ontvangen APK installeren. */
+        fun enqueueFile(context: Context, path: String) {
+            val request = OneTimeWorkRequestBuilder<UpdateWorker>()
+                .setInputData(workDataOf(KEY_FILE to path))
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork("install", ExistingWorkPolicy.REPLACE, request)
+        }
 
         fun enqueue(context: Context, tagPrefix: String, assetName: String, currentVersionCode: Int) {
             val request = OneTimeWorkRequestBuilder<UpdateWorker>()

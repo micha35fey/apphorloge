@@ -15,6 +15,7 @@ import nl.micha.padelscore.score.Team
 import nl.micha.padelscore.score.decodeSettings
 import nl.micha.padelscore.score.encode
 import nl.micha.padelscore.sync.SettingsSync
+import nl.micha.padelscore.sync.WatchTransfer
 import nl.micha.padelscore.sync.ScoreSync
 import nl.micha.padelscore.update.UpdateEvents
 import nl.micha.padelscore.update.UpdateInfo
@@ -81,6 +82,8 @@ class MatchViewModel(app: Application) : AndroidViewModel(app) {
             if (saved.winner == null) MatchNotification.show(app, saved)
         }
         viewModelScope.launch { update = updater.check(BuildConfig.VERSION_CODE) }
+        // De telefoon moet weten welke versie hier draait, om zelf een update te kunnen sturen.
+        WatchTransfer.sendVersion(app, BuildConfig.VERSION_CODE)
         viewModelScope.launch { UpdateEvents.status.collect { if (it != null) updateStatus = it } }
         // Instellingen van de telefoon meteen tonen als het startscherm open staat.
         viewModelScope.launch { SettingsSync.incoming.collect { if (it != null) settings = it } }

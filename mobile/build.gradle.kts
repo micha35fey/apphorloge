@@ -33,8 +33,12 @@ android {
         debug {
             signingConfig = signingConfigs.getByName("padel")
         }
+        // Geoptimaliseerde versie: veel kleiner (sneller over Bluetooth naar het horloge) en sneller.
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("padel")
         }
     }
     compileOptions {

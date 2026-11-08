@@ -42,7 +42,8 @@ mobile/applause_gen.py, dus vrij te gebruiken). Met "Eigen applaus kiezen" gebru
 geluidsbestand van de telefoon; "Applaus testen" laat het horen.
 Met "Stem wisselen" kies je een andere Nederlandse stem, met een voorbeeld.
 Aan of uit met de schakelaar onderaan het telefoonscherm. Gebruikt het media-volume, dus ook via een
-Bluetooth-speaker; muziek gaat even zachter tijdens de omroep en een korte stilte vooraf wekt de speaker.
+Bluetooth-speaker; muziek gaat even zachter tijdens de omroep. Tijdens de partij speelt een
+onhoorbaar zacht geluid zodat de speaker niet in slaap valt en het begin van de stand niet mist.
 
 Niet storen tijdens partij (telefoon): zet Niet storen aan zolang er op het horloge een partij
 bezig is. Meldingen zijn stil; telefoontjes, wekkers en de scheidsrechter komen door. Daarna
@@ -63,10 +64,9 @@ bovenaan het startscherm een knop "Update naar 1.x". De eerste keer vraagt het h
 app mag installeren; daarna bevestig je alleen nog de installatie.
 Dit werkt alleen als de repo openbaar is.
 
-Vanaf de telefoon: tik op "Horloge bijwerken" (of op de update-knop van de telefoon). Het
-horloge zoekt dan zelf de nieuwste versie en installeert die op de achtergrond. De eerste keer
-vraagt het horloge om bevestiging via een melding; daarna kan het zonder, omdat de app dan zelf
-de installateur is. De telefoon toont wat het horloge terugmeldt.
+Vanaf de telefoon: tik op "Horloge bijwerken". De telefoon downloadt de nieuwste horloge-versie
+(via wifi of 4G) en stuurt hem over de koppeling naar het horloge, dat hem installeert en meldt
+hoe het gaat. De update-knop van de telefoon werkt alleen de telefoon zelf bij.
 
 Alle builds worden ondertekend met `app/padelscore.keystore`, zodat een nieuwe versie over de
 oude heen installeert. Niet weggooien: een andere sleutel betekent eerst de app verwijderen.

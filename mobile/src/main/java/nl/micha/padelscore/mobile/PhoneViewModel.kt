@@ -19,6 +19,7 @@ import nl.micha.padelscore.sync.ScoreSync
 import nl.micha.padelscore.sync.SettingsSync
 import nl.micha.padelscore.sync.SyncedScore
 import nl.micha.padelscore.sync.UpdateMessages
+import nl.micha.padelscore.sync.WatchTransfer
 import nl.micha.padelscore.update.UpdateEvents
 import nl.micha.padelscore.update.UpdateInfo
 import nl.micha.padelscore.update.Updater
@@ -136,10 +137,30 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
         voiceLabel = Announcer.voiceLabel()
     }
 
-    /** Vraag het horloge om zichzelf bij te werken. */
+    /**
+     * Het horloge bijwerken via de telefoon: de telefoon downloadt de nieuwste horloge-versie
+     * (wifi of 4G gaat veel sneller dan via het horloge) en stuurt hem over de koppeling door.
+     * Het horloge meldt daarna zelf hoe het installeren gaat.
+     */
     fun updateWatch() {
-        watchUpdateStatus = "Verzoek verstuurd..."
-        UpdateMessages.requestWatchUpdate(getApplication())
+        val app = getApplication<Application>()
+        watchUpdateStatus = "Zoeken naar update..."
+        viewModelScope.launch {
+            watchUpdateStatus = runCatching {
+                val watchVersion = WatchTransfer.readVersion(app) ?: 0
+                val watchUpdater = Updater(app, tagPrefix = "v", assetName = "padelscore.apk", silent = false)
+                val info = watchUpdater.checkOrThrow(watchVersion)
+                    ?: return@runCatching "Al actueel (1.$watchVersion)"
+                watchUpdateStatus = "Telefoon downloadt ${info.versionName}..."
+                val file = java.io.File(app.cacheDir, "watch.apk")
+                watchUpdater.download(info, file)
+                watchUpdateStatus = "Versturen naar horloge..."
+                val sent = WatchTransfer.sendApk(app, file)
+                // Oudere horloge-versies kennen het doorsturen nog niet: die zoeken zelf.
+                UpdateMessages.requestWatchUpdate(app)
+                if (sent == 0) "Niet verbonden" else "${info.versionName} verstuurd, horloge installeert..."
+            }.getOrElse { "Mislukt: ${it.message}" }
+        }
     }
 
     fun installUpdate() {

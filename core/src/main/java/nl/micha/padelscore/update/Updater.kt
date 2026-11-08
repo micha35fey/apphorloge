@@ -13,6 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import java.io.File
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -71,6 +73,20 @@ class Updater(
      * bevestiging; anders vraagt Android erom (via een melding als [fromBackground]).
      */
     suspend fun install(info: UpdateInfo, fromBackground: Boolean = false) = withContext(Dispatchers.IO) {
+        open(info.apkUrl).inputStream.use { installStream(it, fromBackground) }
+    }
+
+    /** Installeren uit een bestand, bijvoorbeeld een APK die de telefoon naar het horloge stuurde. */
+    suspend fun installFile(file: File, fromBackground: Boolean) = withContext(Dispatchers.IO) {
+        file.inputStream().use { installStream(it, fromBackground) }
+    }
+
+    /** Alleen downloaden, naar [target]; de telefoon doet dit voor het horloge. */
+    suspend fun download(info: UpdateInfo, target: File) = withContext(Dispatchers.IO) {
+        open(info.apkUrl).inputStream.use { input -> target.outputStream().use { input.copyTo(it) } }
+    }
+
+    private fun installStream(input: InputStream, fromBackground: Boolean) {
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
         if (silent && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -79,11 +95,9 @@ class Updater(
         }
         val sessionId = installer.createSession(params)
         installer.openSession(sessionId).use { session ->
-            open(info.apkUrl).inputStream.use { input ->
-                session.openWrite("padelscore.apk", 0, -1).use { output ->
-                    input.copyTo(output)
-                    session.fsync(output)
-                }
+            session.openWrite("padelscore.apk", 0, -1).use { output ->
+                input.copyTo(output)
+                session.fsync(output)
             }
             val intent = Intent(context, InstallStatusReceiver::class.java)
                 .putExtra(InstallStatusReceiver.EXTRA_BACKGROUND, fromBackground)

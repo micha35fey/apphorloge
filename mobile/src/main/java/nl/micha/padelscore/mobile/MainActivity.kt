@@ -91,8 +91,8 @@ class MainActivity : ComponentActivity() {
             vm.updateStatus = "Sta installeren toe en tik opnieuw"
             return
         }
-        // Eerst het horloge laten bijwerken; de telefoon-app sluit zelf af tijdens zijn update.
-        vm.updateWatch()
+        // Alleen de telefoon: tijdens zijn eigen update sluit de app, dat zou het doorsturen
+        // naar het horloge afbreken. Het horloge werk je apart bij.
         vm.installUpdate()
     }
 
