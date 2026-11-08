@@ -212,6 +212,13 @@ private fun PhoneApp(vm: PhoneViewModel) {
             }
             if (vm.announce) {
                 TextButton(onClick = { vm.nextVoice() }) { Text("Stem wisselen (${vm.voiceLabel})") }
+                // Mist de speaker het begin, dan meer stilte vooraf. Elke tik laat een voorbeeld horen.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { vm.nextLead() }) {
+                        Text("Speaker-vertraging: ${"%.1f".format(vm.leadMs / 1000.0).replace('.', ',')} s")
+                    }
+                    TextButton(onClick = { vm.testAnnouncement() }) { Text("Test omroep") }
+                }
                 ApplauseButtons(vm)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {

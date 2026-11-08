@@ -132,6 +132,16 @@ class PhoneViewModel(app: Application) : AndroidViewModel(app) {
         SettingsSync.send(getApplication(), settings)
     }
 
+    /** Stilte vooraf voor de speaker, in ms. */
+    var leadMs by mutableStateOf(Announcer.leadMs(app))
+        private set
+
+    fun nextLead() {
+        leadMs = Announcer.nextLead(getApplication())
+    }
+
+    fun testAnnouncement() = Announcer.testAnnouncement(getApplication())
+
     fun nextVoice() {
         Announcer.nextVoice(getApplication())
         voiceLabel = Announcer.voiceLabel()

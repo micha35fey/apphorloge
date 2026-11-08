@@ -27,8 +27,13 @@ object Announcer {
     private const val APPLAUSE_MS = 10_000L
     private const val PAUSE_MS = 700L
 
-    /** Stilte vooraf, zodat een Bluetooth-speaker uit zijn slaapstand komt en het begin niet mist. */
-    private const val WAKE_MS = 900L
+    /**
+     * Stilte vooraf, zodat een Bluetooth-speaker uit zijn slaapstand komt en het begin niet mist.
+     * Per speaker verschillend, daarom in te stellen ("Speaker-vertraging").
+     */
+    private const val KEY_LEAD = "lead_ms"
+    private val LEAD_OPTIONS = listOf(500, 1000, 1500, 2000, 3000)
+    private const val DEFAULT_LEAD = 1000
     private const val LAST_PART = "last"
     private const val SAMPLE = "Dertig, vijftien\nGame\ndrie, één"
 
@@ -305,7 +310,7 @@ object Announcer {
         files.forEach { it.delete() }
         if (pcm.any { it == null }) return spokenText?.let { speakDirect(it) } ?: Unit
         val joined = File(context.cacheDir, "omroep.wav")
-        joined.writeBytes(WavJoin.join(pcm.filterNotNull(), WAKE_MS.toInt(), PAUSE_MS.toInt()))
+        joined.writeBytes(WavJoin.join(pcm.filterNotNull(), leadMs(context), PAUSE_MS.toInt()))
         stopVoice()
         audio?.requestAudioFocus(focus)
         voicePlayer = runCatching {
@@ -346,7 +351,7 @@ object Announcer {
     private fun speakDirect(text: String) {
         val engine = tts ?: return
         audio?.requestAudioFocus(focus)
-        engine.playSilentUtterance(WAKE_MS, TextToSpeech.QUEUE_FLUSH, "wake")
+        engine.playSilentUtterance(leadMs(appContext).toLong(), TextToSpeech.QUEUE_FLUSH, "wake")
         val parts = text.split(RefereeCall.PAUSE)
         parts.forEachIndexed { i, part ->
             if (i > 0) engine.playSilentUtterance(PAUSE_MS, TextToSpeech.QUEUE_ADD, "pause$i")
@@ -356,4 +361,22 @@ object Announcer {
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    /** Ingestelde stilte vooraf in ms. */
+    fun leadMs(context: Context?): Int =
+        context?.let { prefs(it).getInt(KEY_LEAD, DEFAULT_LEAD) } ?: DEFAULT_LEAD
+
+    /** Volgende stand van de speaker-vertraging kiezen en meteen een voorbeeld laten horen. */
+    fun nextLead(context: Context): Int {
+        val next = LEAD_OPTIONS.firstOrNull { it > leadMs(context) } ?: LEAD_OPTIONS.first()
+        prefs(context).edit().putInt(KEY_LEAD, next).apply()
+        testAnnouncement(context)
+        return next
+    }
+
+    /** Een voorbeeld-omroep, om stem en speaker-vertraging uit te proberen. */
+    fun testAnnouncement(context: Context) {
+        appContext = context.applicationContext
+        if (ready) say(SAMPLE) else speak(context.applicationContext, SAMPLE)
+    }
 }
